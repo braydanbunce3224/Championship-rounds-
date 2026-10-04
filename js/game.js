@@ -545,7 +545,7 @@ function mmCTA(){const n=S.next,wk=n.week-S.week,ci=cardInfo(),b=`${ci.count} bo
   if(wk>0)return ctaBar(`${P().short} ${n.num} in ${wk} wk${wk>1?'s':''}`,`${b} booked · Hype ${ci.hype}`,`<button class="btn" data-act="advance">Next week</button>`);
   if(ci.count>=4)return ctaBar('Fight week',`${P().short} ${n.num} · ${b} · Hype ${ci.hype}`,`<button class="btn" data-act="run">Fight night</button>`);
   return ctaBar(`Need ${4-ci.count} more`,`${ci.count} of 4 bouts booked`,`<button class="btn ghost" data-act="askpostpone">Delay</button><button class="btn" data-act="book">Add bout</button>`)}
-function render(){if(MGS)return;
+function render(){if(MGS||LIVE_ON)return;
   if(!S){document.body.className=U.start==='create'?'p-REG':'';LASTSOPEN=null;U.sheet=null;paint(`<div class="shell">${startScreen()}</div>`,'start:'+(U.start||''));return}
   computeRanks();
   const over=(U.sheet?sheetV():'')+(U.ev||(isCareer()&&U.cf)?'<div class="arena" id="arena"></div>':'')+(isCareer()&&U.mg?mgV():'');
@@ -667,11 +667,13 @@ function howtoSheet(s){const sec=(h,l)=>`<div><h4>${h}</h4><ul>${l.map(x=>`<li>$
     sec('The weekly loop',['Take a fight offer from the <b>Home</b> tab.','You get <b>two training sessions</b> a week in the <b>Gym</b>. Unused sessions are lost.','Tap <b>Next week</b> at the bottom of any screen to move on. On fight week the same button becomes <b>Walk out</b>.']),
     sec('Training',['<b>Play</b> a drill for the biggest gains. You are graded S to D.','<b>Quick</b> gives an average result without playing.','Sparring trains everything but carries the most injury risk.','Fatigue over 40 costs you cardio on fight night. Rest to recover.']),
     sec('Fight camp',['Film study twice reveals his ratings, then his weakness.','A gameplan that attacks his weakness gets a bonus.','Promoting the fight raises your popularity and win bonus.']),
+    sec('Fighting it yourself',['On fight night choose <b>Fight it yourself</b>. ◀ ▶ move, <b>Jab</b>, <b>Power</b> (hold for an overhand), <b>Kick</b> (hold for a head kick), <b>Shoot</b> for takedowns and <b>Block</b>.','Buttons change in the clinch and on the ground. Scrambles and submissions are tap battles.','Pause during a fight to see every control.']),
     sec('Climbing',['Win three regional fights to earn a Contender Showcase, then all three promotions bid for you.','Top-3 contenders get title shots (top 2 in the GFL).','Chin never improves and wears down. Ratings slip from age 31.'])]
   :[
     sec('The weekly loop',['Each event is two weeks apart. Tap <b>Next week</b> at the bottom of any screen.','Book <b>4 to 12 bouts</b> before fight week, then tap <b>Fight night</b>.']),
     sec('Booking',['<b>Card</b> tab, <b>Add a bout</b>: pick a fighter, pick an opponent, make the offer.','Fighters can refuse. Champions want contenders; top-5 fighters won\'t face unranked ones.','Tap any booked bout to move it, make it the main event, remove it, or replace an injured fighter.']),
     sec('Hype',['Close odds, rankings, rivalries, callouts, rematches and striker-vs-striker fights all add hype.','Mismatches and short-notice replacements cost hype.']),
+    sec('Going live',['On fight night tap <b>Go live</b> on any bout to watch it play out, or take control of either fighter.']),
     sec('Business',['TV pays a flat fee. Pay-per-view pays on hype and fades if you run them back to back.','Bigger venues cost more but sell more tickets.','Meet owner directives. If owner approval hits zero, you are fired.'])];
   return{title:'How to play',back:s.prev?'sback':null,body:`<div class="howto" style="display:flex;flex-direction:column;gap:16px">${body.join('')}</div>`}}
 function fighterSheet(f){const c=isChamp(f),mineF=!isCareer()&&mine(f),booked=(S.next?S.next.bouts:[]).some(x=>(x.a===f.id||x.b===f.id)&&x.out!==f.id);
@@ -732,12 +734,15 @@ function renderArena(partial){const el=document.getElementById('arena');if(!el||
     <div class="tape num"><span class="l">${x.sig[0]}</span><span class="c">Sig. strikes</span><span>${x.sig[1]}</span><span class="l">${x.td[0]}</span><span class="c">Takedowns</span><span>${x.td[1]}</span><span class="l">${x.kd[0]}</span><span class="c">Knockdowns</span><span>${x.kd[1]}</span></div>`:'';
   const slot=ev.idx===0?'Main event':ev.idx===1?'Co-main':ev.idx<5?'Main card':'Prelims';
   if(partial){const p=document.getElementById('pbp');if(p){p.innerHTML=html;const v=document.getElementById('verd');if(v)v.innerHTML=verdict;const ab=el.querySelector('.abody');ab.scrollTop=ab.scrollHeight;
-    const nb=document.getElementById('nextb');if(nb&&done){nb.outerHTML=nextBtn(ev)}return}}
+    const ft=el.querySelector('.afoot');if(ft&&done)ft.innerHTML=nextBtn(ev);return}}
   el.innerHTML=`<div class="ahead"><span style="font-family:var(--f-display);font-weight:900;font-size:20px;text-transform:uppercase">${esc(ev.name)}</span><span class="lbl">Bout ${pos} of ${n}</span></div>
    <div class="abody"><div class="lbl" style="color:var(--acc)">${slot}${r.bt.title?' · Title fight':''} · ${ml(r.info.p)} / ${ml(1-r.info.p)}</div>
     <div class="face"><div class="n" style="${nz(r.a.last)}">${esc(r.a.last)}<small>${r.a.rank} · ${r.a.rec}</small></div><div class="vs">VS</div><div class="n r" style="${nz(r.b.last)}">${esc(r.b.last)}<small>${r.b.rank} · ${r.b.rec}</small></div></div>
     <div class="pbp" id="pbp">${html}</div><div id="verd" style="display:flex;flex-direction:column;gap:10px">${verdict}</div></div>
-   <div class="afoot">${done?nextBtn(ev):`<button class="btn ghost" id="nextb" data-act="skip">Skip to result</button>`}</div>`;
+   <div class="afoot">${done?nextBtn(ev):`<button class="btn ghost" data-act="golive">Go live</button><button class="btn ghost" id="nextb" data-act="skip">Skip to result</button>`}</div>`;
+  if(ev.liveChoose&&!done){el.querySelector('.abody').insertAdjacentHTML('afterbegin',`<div class="list"><div class="item"><div class="lbl">Go live</div>
+    <button class="mrow" data-act="livepick" data-v="w">${svg(PLAYI)}<span>Watch it live</span></button><button class="mrow" data-act="livepick" data-v="0">${svg(USERI)}<span>Play as ${esc(r.a.name)}</span></button><button class="mrow" data-act="livepick" data-v="1">${svg(USERI)}<span>Play as ${esc(r.b.name)}</span></button>
+    <div class="lbl">Difficulty</div>${diffSeg('mdiff')}</div></div>`);el.querySelector('.abody').scrollTop=0;fitNames(el);return}
   fitNames(el);const ab=el.querySelector('.abody');ab.scrollTop=ab.scrollHeight}
 function nextBtn(ev){return ev.idx>0?`<button class="btn" id="nextb" data-act="nextbout">Next bout</button>`:`<button class="btn" id="nextb" data-act="tosummary">Event results</button>`}
 function summaryV(){const ev=U.ev,pr=ev.proj;
@@ -754,9 +759,47 @@ function summaryV(){const ev=U.ev,pr=ev.proj;
     <span>Expenses</span><span class="neg">${fm(-pr.cost)}</span><span>Bonuses</span><span class="neg">${fm(-nb*.05)}</span><hr><b>Estimated profit</b><b class="${pr.profit-nb*.05<0?'neg':'pos'}">${fm(pr.profit-nb*.05)}</b></div><p>Final numbers land within a few percent once the buy rate settles.</p></div></div></section></div>
    <div class="afoot"><button class="btn" data-act="finish">Finish event</button></div>`}
 
+/* ============ live-fight settings ============ */
+function lsGet(k,d){try{return localStorage.getItem(k)||d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+const DIFFS=[['easy','Easy'],['normal','Normal'],['hard','Hard']];
+function diffSeg(act){const cur=lsGet('cr.diff','normal');return `<div class="seg">${DIFFS.map(([k,l])=>`<button class="${cur===k?'on':''}" data-act="${act}" data-v="${k}">${l}</button>`).join('')}</div>`}
+
+/* ============ QUICK FIGHT ============ */
+const QARENA=[['TFC','TFC',false],['GFL','GFL',false],['RYU','RYUJIN',true],['REG','Gym',false]];
+function quickFighter(style,side){const nat=pick(Object.keys(NAT)),mod=STYLES[style],r={};
+  for(const k of Object.keys(RATING_LBL))r[k]=clamp(Math.round(72+(mod[k]||0)*.8+rnd(-4,4)),45,95);
+  return{id:'q'+side+Math.floor(Math.random()*1e6),first:pick(NAT[nat].f),last:pick(NAT[nat].l),nat,style,r,ovr:ovrOf(r),div:'MW'}}
+function qfInit(){const q=U.qf||(U.qf={my:'Striker',op:'random',arena:'TFC',rounds:3});
+  if(!q.a||q.a.style!==q.my)q.a=quickFighter(q.my,0);
+  const os=q.op==='random'?pick(Object.keys(STYLES)):q.op;if(!q.b||(q.op!=='random'&&q.b.style!==q.op))q.b=quickFighter(os,1);return q}
+function quickV(){const q=qfInit();
+  if(q.res){const x=q.res,W=x.w<0?null:x.w===0?q.a:q.b;
+    return `<main class="view notop" id="view"><div><div class="lbl">Quick fight result</div><h2 class="hero2">${x.w===0?'You <span>win</span>':x.w===1?'You <span>lose</span>':'<span>Draw</span>'}</h2></div>
+     <div class="list"><div class="item"><div class="k"><span class="t">${W?esc(fname(W))+' wins':'The judges split it'}</span><span class="lbl">${x.fin?`R${x.rd} ${x.time}`:'Decision'}</span></div><p>${esc(x.method)}</p></div></div>
+     <div class="tape num"><span class="l"><b>${esc(q.a.last)}</b></span><span class="c"></span><span><b>${esc(q.b.last)}</b></span><span class="l">${x.sig[0]}</span><span class="c">Landed</span><span>${x.sig[1]}</span><span class="l">${x.td[0]}</span><span class="c">Takedowns</span><span>${x.td[1]}</span><span class="l">${x.kd[0]}</span><span class="c">Knockdowns</span><span>${x.kd[1]}</span></div>
+     </main>${ctaBar('Run it back?','Same fighters, new fight',`<button class="btn ghost" data-act="qnew">New fight</button><button class="btn" data-act="qgo">Rematch</button>`,true)}`}
+  const seg=(k,opts,cls='')=>`<div class="seg ${cls}">${opts.map(([v,l])=>`<button class="${String(q[k])===String(v)?'on':''}" data-act="qset" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  const st=Object.keys(STYLES).map(s=>[s,s]);
+  const card=(F,lbl)=>`<div class="item"><div class="k"><span class="lbl">${lbl}</span><span class="tag">${F.style}</span></div><div class="k" style="align-items:center"><span class="t" style="font-size:18px">${esc(fname(F))}</span><span class="ovr num">${F.ovr}<small>OVR</small></span></div></div>`;
+  return `<main class="view notop" id="view"><div><button class="btn ghost sm" data-act="smode" data-v="">${svg(BACK)} Back</button></div>
+   <div><div class="lbl">Quick fight</div><h2 class="hero2">Step into the <span>cage</span></h2></div>
+   <div class="list">${card(q.a,'Red corner · you')}${card(q.b,'Blue corner · CPU')}</div>
+   <button class="btn ghost sm" data-act="qroll">New opponent</button>
+   <section class="sec"><header><h3>Your style</h3></header>${seg('my',st,'g3')}</section>
+   <section class="sec"><header><h3>Opponent</h3></header>${seg('op',[['random','Random'],...st],'g3')}</section>
+   <section class="sec"><header><h3>Arena</h3></header>${seg('arena',QARENA.map(a=>[a[0],a[1]]))}</section>
+   <section class="sec"><header><h3>Rounds</h3></header>${seg('rounds',[[1,'1 round'],[3,'3 rounds'],[5,'5 rounds']])}</section>
+   <section class="sec"><header><h3>Difficulty</h3></header>${diffSeg('qdiff')}</section>
+  </main>${ctaBar(`${esc(q.a.last)} vs ${esc(q.b.last)}`,`${q.rounds} × 5 min · ${QARENA.find(a=>a[0]===q.arena)[1]}`,`<button class="btn" data-act="qgo">Fight!</button>`,true)}`}
+function qfGo(){const q=qfInit();q.res=null;const ar=QARENA.find(a=>a[0]===q.arena);
+  openLive({a:q.a,b:q.b,rounds:Array(+q.rounds).fill(5),ring:ar[2],arena:ar[0],human:0,diff:lsGet('cr.diff','normal'),canQuit:true,
+    onEnd:x=>{if(x)q.res=x;render()}})}
+
 /* ============ START SCREEN (both modes) ============ */
 function startScreen(){
   if(U.start==='create')return createV();
+  if(U.start==='quick')return quickV();
   const backBtn=`<div><button class="btn ghost sm" data-act="smode" data-v="">${svg(BACK)} Back</button></div>`;
   if(U.start==='mm')return `<main class="view notop nobot start" id="view">${backBtn}
    <div><div class="lbl">Matchmaker</div><h2 class="hero2">Pick your <span>promotion</span></h2></div>
@@ -772,7 +815,10 @@ function startScreen(){
     <ul><li>Five playable training drills</li><li>Fight camps, gameplans and callouts</li><li>Contracts, rivals and title runs</li></ul><span class="go">Create a fighter ${svg(CHEV)}</span></button>
    <button class="pick" data-act="smode" data-v="mm"><div class="stripe" style="background:#e9b53c"></div><div class="lbl" style="color:#e9b53c">Mode 2</div><h2>Matchmaker</h2>
     <p>Run TFC, GFL or RYUJIN. Build the cards, sell the fights, and keep the owner happy.</p>
-    <ul><li>Bouts, title fights and pay-per-views</li><li>Contracts, injuries and free agency</li><li>Fan and media reaction to every card</li></ul><span class="go">Pick a promotion ${svg(CHEV)}</span></button></main>`}
+    <ul><li>Bouts, title fights and pay-per-views</li><li>Contracts, injuries and free agency</li><li>Fan and media reaction to every card</li></ul><span class="go">Pick a promotion ${svg(CHEV)}</span></button>
+   <button class="pick" data-act="smode" data-v="quick"><div class="stripe" style="background:#ea4452"></div><div class="lbl" style="color:#ea4452">Mode 3</div><h2>Quick Fight</h2>
+    <p>Jump straight into a fight. Pick your style and an opponent, then take control.</p>
+    <ul><li>Hands-on striking, clinch and ground game</li><li>Three difficulty levels</li></ul><span class="go">Fight now ${svg(CHEV)}</span></button></main>`}
 const CR_PTS=20,CR_MAX=12;
 function crDefault(){return{first:'',last:'',nick:'',nat:'USA',div:'LW',style:'All-rounder',persona:'Humble',pts:{str:0,pow:0,wre:0,grp:0,car:0,chn:0}}}
 function crRatings(cr){const mod=STYLES[cr.style],r={};for(const k of Object.keys(RATING_LBL))r[k]=clamp(Math.round(50+(mod[k]||0)*.6+cr.pts[k]),35,80);return r}
@@ -1034,7 +1080,13 @@ function walkOut(){const c=C(),f=c.fight,me=ME(),opp=S.F[f.opp],pl=PLANS[U.cf.pl
   if(c.fatigue>40)m.r.car=clamp(m.r.car-Math.round((c.fatigue-40)/3),30,99);
   if(c.injury&&c.injury.until>S.week)m.r[c.injury.k]=clamp(m.r[c.injury.k]-c.injury.amt,30,99);
   const rounds=fightRounds(f),ring=fightRing();
-  const p=odds(me,opp,rounds,ring),x=simFight(m,opp,{rounds,ring,pbp:true});
+  const p=odds(me,opp,rounds,ring);
+  if(U.cf.mode==='live'){const lm={...me,r:{...me.r}};
+    if(c.fatigue>40)lm.r.car=clamp(lm.r.car-Math.round((c.fatigue-40)/3),30,99);
+    if(c.injury&&c.injury.until>S.week)lm.r[c.injury.k]=clamp(lm.r[c.injury.k]-c.injury.amt,30,99);
+    openLive({a:lm,b:opp,rounds,ring,arena:me.promo,human:0,diff:lsGet('cr.diff','normal'),title:!!f.title,canQuit:false,
+      onEnd:x=>{U.cf={...U.cf,phase:'fight',x,p,shown:1e9};render()}});return}
+  const x=simFight(m,opp,{rounds,ring,pbp:true});
   U.cf={...U.cf,phase:'fight',x,p,shown:0};render();cfReveal()}
 function cfTotal(){return U.cf.x.pbp.reduce((s,r)=>s+r.lines.length+1,0)}
 function cfReveal(){clearInterval(cfT);if(!U.cf||U.cf.phase!=='fight')return;
@@ -1163,8 +1215,10 @@ function renderCF(partial){const el=document.getElementById('arena');if(!el||!U.
      <div class="face"><div class="n" style="${nz(me.last)}">${esc(me.last)}<small>${rec(me)}</small></div><div class="vs">VS</div><div class="n r" style="${nz(opp.last)}">${esc(opp.last)}<small>${rec(opp)} · ${opp.style}</small></div></div>
      <div class="tape num">${Object.keys(RATING_LBL).map(k=>row(RATING_LBL[k],me.r[k],sv(opp.r[k]))).join('')}</div>
      <p style="margin:0;color:var(--dim);font-size:14px">${f.intel>=2?`Film study: his weakest area is ${WEAKTXT[wk]}. A gameplan that attacks it gets +4.`:f.intel===1?'Ratings scouted. One more film session would have found his weakness.':'You skipped film study. His ratings are estimates.'}${c.fatigue>40?` You are carrying fatigue (${Math.round(c.fatigue)}), which will cost you cardio.`:''}${c.injury?` Your ${RATING_LBL[c.injury.k].toLowerCase()} injury costs you ${c.injury.amt}.`:''}</p>
-     <section class="sec"><header><h3>Gameplan</h3></header><div class="list">${Object.keys(PLANS).map(k=>`<button class="item" data-act="cplan" data-v="${k}" style="width:100%;text-align:left;${cf.plan===k?'background:var(--panel2);box-shadow:inset 3px 0 0 var(--acc)':''}"><div class="k"><span class="t">${PLANS[k].n}</span>${f.intel>=2&&PLANS[k].hits===wk?'<span class="tag good">Exploits weakness</span>':cf.plan===k?'<span class="tag acc">Selected</span>':''}</div><p>${PLANS[k].d}</p></button>`).join('')}</div></section></div>
-     <div class="afoot"><button class="btn ghost" data-act="cfback">Not yet</button><button class="btn" data-act="walkout">Walk out</button></div>`;fitNames(el);return}
+     <section class="sec"><header><h3>How do you fight it?</h3></header><div class="seg">${[['live','Fight it yourself'],['sim','Simulate']].map(([k,l])=>`<button class="${(cf.mode||'live')===k?'on':''}" data-act="cmode" data-v="${k}">${l}</button>`).join('')}</div>
+      ${(cf.mode||'live')==='live'?`<div class="lbl">Difficulty</div>${diffSeg('cdiff')}<p class="hint">You control ${esc(me.last)}. Your ratings, fatigue and injuries all count. Pause any time for the controls.</p>`:''}</section>
+     ${(cf.mode||'live')==='live'?'':`<section class="sec"><header><h3>Gameplan</h3></header><div class="list">${Object.keys(PLANS).map(k=>`<button class="item" data-act="cplan" data-v="${k}" style="width:100%;text-align:left;${cf.plan===k?'background:var(--panel2);box-shadow:inset 3px 0 0 var(--acc)':''}"><div class="k"><span class="t">${PLANS[k].n}</span>${f.intel>=2&&PLANS[k].hits===wk?'<span class="tag good">Exploits weakness</span>':cf.plan===k?'<span class="tag acc">Selected</span>':''}</div><p>${PLANS[k].d}</p></button>`).join('')}</div></section>`}</div>
+     <div class="afoot"><button class="btn ghost" data-act="cfback">Not yet</button><button class="btn" data-act="walkout">${(cf.mode||'live')==='live'?'Walk out':'Simulate fight'}</button></div>`;fitNames(el);return}
   const x=cf.x;let shown=cf.shown,html='';
   for(const rd of x.pbp){if(shown<=0)break;shown--;html+=`<div class="rd">Round ${rd.rd}</div>`;for(const l of rd.lines){if(shown<=0)break;shown--;html+=`<p class="${l.big?'big':''}">${esc(l.t)}</p>`}}
   const done=cf.shown>=cfTotal(),won=x.w===0;
@@ -1173,7 +1227,7 @@ function renderCF(partial){const el=document.getElementById('arena');if(!el||!U.
     <div class="tape num"><span class="l">${x.sig[0]}</span><span class="c">Sig. strikes</span><span>${x.sig[1]}</span><span class="l">${x.td[0]}</span><span class="c">Takedowns</span><span>${x.td[1]}</span><span class="l">${x.kd[0]}</span><span class="c">Knockdowns</span><span>${x.kd[1]}</span></div>`:'';
   const foot=done?`<button class="btn" data-act="cpost">Post-fight</button>`:`<button class="btn ghost" data-act="cskip">Skip to result</button>`;
   if(partial){const p=document.getElementById('pbp');if(p){p.innerHTML=html;document.getElementById('verd').innerHTML=verdict;document.getElementById('cfoot').innerHTML=foot;const ab=el.querySelector('.abody');ab.scrollTop=ab.scrollHeight;return}}
-  el.innerHTML=`${head(f.label)}<div class="abody"><div class="lbl" style="color:var(--acc)">${PLANS[cf.plan].n} gameplan · You ${ml(cf.p)}</div>
+  el.innerHTML=`${head(f.label)}<div class="abody"><div class="lbl" style="color:var(--acc)">${x.live?'Fought it yourself':PLANS[cf.plan].n+' gameplan'} · You ${ml(cf.p)}</div>
    <div class="face"><div class="n" style="${nz(me.last)}">${esc(me.last)}<small>${rec(me)}</small></div><div class="vs">VS</div><div class="n r" style="${nz(opp.last)}">${esc(opp.last)}<small>${rec(opp)}</small></div></div>
    <div class="pbp" id="pbp">${html}</div><div id="verd" style="display:flex;flex-direction:column;gap:10px">${verdict}</div></div><div class="afoot" id="cfoot">${foot}</div>`;
   fitNames(el);const ab=el.querySelector('.abody');ab.scrollTop=ab.scrollHeight}
@@ -1197,6 +1251,9 @@ const CSHEET={
 };
 
 const CH={
+  qset(t,v){U.qf[t.dataset.k]=t.dataset.k==='rounds'?+v:v;if(t.dataset.k==='op'&&v==='random')U.qf.b=null;render()},
+  qroll(){U.qf.b=null;render()},qnew(){U.qf.b=null;U.qf.res=null;render()},qgo(){qfGo()},qdiff(t,v){lsSet('cr.diff',v);render()},
+  cdiff(t,v){lsSet('cr.diff',v);renderCF()},cmode(t,v){lsSet('cr.ctrl',v);U.cf.mode=v;renderCF()},
   smode(t,v){U.start=v||null;if(v==='create'&&!U.cr)U.cr=crDefault();render()},
   cset(t,v){U.cr[t.dataset.k]=v;render()},
   cpt(t,v){const k=t.dataset.k,cr=U.cr,used=Object.values(cr.pts).reduce((a,b)=>a+b,0),d=+v;
@@ -1211,7 +1268,7 @@ const CH={
   mgstart(){U.mg.phase='play';render();mgPlay(U.mg.kind)},
   mgquit(){mgStop();U.mg=null;render()},mgclose(){U.mg=null;render()},
   cquick(t,v){quickTrain(v)},cspar(){spar()},crest(){rest();render()},cstudy(){study()},cpromo(){promote()},ccoach(t,v){buyCoach(v)},
-  cfight(){U.cf={phase:'plan',plan:'Balanced'};render()},cplan(t,v){U.cf.plan=v;renderCF()},cfback(){U.cf=null;render()},
+  cfight(){U.cf={phase:'plan',plan:'Balanced',mode:lsGet('cr.ctrl','live')};render()},cplan(t,v){U.cf.plan=v;renderCF()},cfback(){U.cf=null;render()},
   walkout(){walkOut()},cskip(){clearInterval(cfT);U.cf.shown=cfTotal();renderCF()},cpost(){applyCareerFight()},
   ccall(t,v){if(v==='none'){U.cf.sum.called='none';renderCF()}else doCallout(v)},
   cdone(){U.cf=null;U.sheet=null;U.tab=C().contracts.length?'home':'news';U.nf='all';render()},
@@ -1235,7 +1292,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape'||!U.sheet||MGS)retur
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('input[data-cr]')){e.preventDefault();const ids=['cr-first','cr-last','cr-nick'],i=ids.indexOf(e.target.id);const n=i>=0&&i<2&&document.getElementById(ids[i+1]);if(n)n.focus();else e.target.blur()}});
 
 /* ============ input ============ */
-document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.disabled||(!S&&!['new','smode','cset','cpt','cgo'].includes(t.dataset.act)))return;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.disabled||(!S&&!['new','smode','cset','cpt','cgo','qset','qgo','qroll','qnew','qdiff'].includes(t.dataset.act)))return;
   const a=t.dataset.act,v=t.dataset.v;
   if(a==='scrim'&&e.target!==t)return;
   const H={
@@ -1278,7 +1335,12 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(
     letgo(){toFA(S.F[v],'contract expired');save();render()},
     askrelease(){const f=S.F[v];U.sheet={type:'confirm',title:'Release fighter?',body:`${esc(fname(f))} becomes a free agent immediately${isChamp(f)?' and the title is vacated':''}. Rival promotions may sign him.`,yes:'Release him',act:'release',v,prev:U.sheet};render()},
     release(){const f=S.F[v];toFA(f,'released');U.sheet=null;save();toast(`${fname(f)} has been released.`)},
-    skip(){const ev=U.ev;clearInterval(revealT);ev.shown=1e9;renderArena()},
+    skip(){const ev=U.ev;clearInterval(revealT);ev.shown=1e9;ev.liveChoose=false;renderArena()},
+    golive(){clearInterval(revealT);U.ev.liveChoose=!U.ev.liveChoose;renderArena()},
+    mdiff(){lsSet('cr.diff',v);renderArena()},
+    livepick(){const ev=U.ev,r=ev.res[ev.idx];ev.liveChoose=false;
+      openLive({a:S.F[r.a.id],b:S.F[r.b.id],rounds:r.info.rounds,ring:P().ring,arena:S.pid,human:v==='w'?null:+v,diff:lsGet('cr.diff','normal'),title:!!r.bt.title,canQuit:false,
+        onEnd:x=>{if(x)r.x=x;ev.shown=1e9;render()}})},
     nextbout(){U.ev.idx--;U.ev.shown=0;renderArena();startReveal()},
     tosummary(){U.ev.phase='summary';renderArena()},
     bonus(){U.ev.bonus[v]=!U.ev.bonus[v];renderArena()},

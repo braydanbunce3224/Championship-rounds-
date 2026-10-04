@@ -1,17 +1,30 @@
 # Championship Rounds
 
-An MMA simulation game for mobile from **SpecMagic Games**. Build a fighter from the regional circuit to a world title, or run a fight promotion as its matchmaker.
+An MMA game for mobile from **SpecMagic Games**. Build a fighter from the regional circuit to a world title, run a fight promotion as its matchmaker, or jump straight into a fight. Every fight can be played hands-on, with pixel-art fighters and direct control.
 
 The whole game runs in the browser with no build step and no server. It installs to a phone home screen and plays offline.
 
 ## Game modes
+
+### Hands-on fights
+Every fight can be played live in a side-on pixel-art arena:
+- **Striking:** jab, cross/hook combos, overhand, leg kicks and head kicks, blocking, checking kicks, and dodging.
+- **Damage that matters:** separate head, body and leg damage, stamina, knockdowns, and wobbled fighters.
+- **Grappling:** clinch work, takedowns and sprawls, five ground positions (guard, half guard, side control, mount, back), ground and pound, sweeps, escapes, and submissions decided by tap battles.
+- **Rules by promotion:** cage or ring, and soccer kicks in RYUJIN.
+- **Between rounds:** your corner gives advice based on how the round went. Three judges score every round.
+- **AI opponents** fight to their style (striker, kickboxer, wrestler, BJJ, brawler, all-rounder) on Easy, Normal or Hard.
+
 
 ### Fighter Career
 - Create a fighter: name, country, weight class, fighting style, personality and starting attributes.
 - Win three fights on the regional circuit to earn a Contender Showcase. Win that, and TFC, GFL and RYUJIN bid for your contract.
 - Take two training sessions a week in five playable drills: Mitt Work, Heavy Bag, Takedown Drill, Scramble Drill and Sprint Intervals. Sparring trains everything at a higher injury risk.
 - In fight camp, study film to scout your opponent, promote the fight to build hype, and manage fatigue and injuries.
-- On fight night, pick a gameplan and watch the fight play out round by round. Call out rivals, chase belts, negotiate contracts, and retire with a legacy score.
+- On fight night, fight it yourself or pick a gameplan and simulate it round by round. Call out rivals, chase belts, negotiate contracts, and retire with a legacy score.
+
+### Quick Fight
+- Pick your style and an opponent, choose the arena, rounds and difficulty, and fight.
 
 ### Matchmaker
 - Run one of three promotions while the other two run as AI rivals:
@@ -20,8 +33,22 @@ The whole game runs in the browser with no build step and no server. It installs
   - **RYUJIN Fighting Championships**: ring, 10-minute first rounds, soccer kicks, open-weight fights.
 - Book 4 to 12 bouts per card. Fighters can turn fights down, get injured, miss weight or call each other out.
 - Manage purses, venues, contracts, free agency and owner directives. If owner approval hits zero, you're fired.
+- Tap **Go live** on any bout on fight night to watch it play out, or take control of either fighter.
 
 Both modes share a **News** tab with headlines, media grades and fan reactions to every result.
+
+## Fight controls
+
+| Touch | Keyboard | Standing | Clinch | Ground (top / bottom) |
+|---|---|---|---|---|
+| ◀ ▶ | A / D | Move (double-tap away to dodge) | | Hold to stand up / — |
+| Block | Space | Guard up, check kicks, tap to sprawl | Break | Posture / Defend |
+| Jab | J | Jab | Short punches | Punch / Strike |
+| Power | K | Cross and hook (hold: overhand) | Knee | Elbow / Submit (guard) |
+| Kick | L | Leg kick (hold: head kick) | Trip | Submit / Get up |
+| Shoot | I | Takedown (up close: clinch) | Body lock | Advance / Sweep or escape |
+
+Scrambles and submissions are tap battles: tap any button as fast as you can. Press P or the pause button for help mid-fight.
 
 ## Play it
 
@@ -46,7 +73,9 @@ On a phone, open that link and use **Add to Home Screen** to install it like an 
 ```
 index.html             Page shell, meta tags, font and file links
 css/styles.css         All styles (dark broadcast theme, mobile-first layout)
-js/game.js             Game code: simulation, both modes, UI, input
+js/fight.js            Live fight engine: striking, grappling, AI, judging
+js/fightview.js        Fight screen: pixel-art renderer, controls, HUD, sound
+js/game.js             Game code: careers, matchmaking, simulation, menus
 manifest.webmanifest   Home-screen install settings
 sw.js                  Service worker for offline play
 icons/                 App and browser icons
@@ -63,9 +92,8 @@ icons/                 App and browser icons
 
 ## Roadmap ideas
 
-- Corner advice between rounds during career fights
 - A full GFL playoff bracket in career mode
-- Animated fighters on fight night
+- Multiple control schemes and a training mode for the fight controls
 - Wrapping the game with Capacitor for the App Store and Google Play
 
 ## License
