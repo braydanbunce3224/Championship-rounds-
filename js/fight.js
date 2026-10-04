@@ -6,7 +6,7 @@
  * Loaded before game.js; uses helpers from game.js (clamp, pick, seeded, hash, pickr) at runtime.
  * Fighter sides: 0 = red corner (A), 1 = blue corner (B). Results match simFight()'s shape.
  */
-const LV={W:128,H:80,FLOOR:70,L:10,R:118,TS:5,MINGAP:9};
+const LV={W:128,H:80,FLOOR:70,L:10,R:118,TS:5,MINGAP:9,PACE:.78,BREATH:2.2,TAPGRACE:.45};
 const LMV={
   jab:{w:.09,a:.06,r:.14,sta:3.5,rng:18,dmg:3,tgt:'head',pts:1,nm:'jab'},
   cross:{w:.15,a:.06,r:.24,sta:6.5,rng:17,dmg:7,tgt:'head',pts:2,pow:1,nm:'right hand'},
@@ -64,7 +64,7 @@ class LiveFight{
     this.round=1;this.clock=this.rounds[0]*60;this.el=0;this.phase='intro';this.pt=0;this.T=0;
     this.pos='stand';this.g=null;this.ct=null;this.idle=0;
     this.rp=[[0,0]];this.rkd=[[0,0]];this.log=[[]];this.cards=[[0,0],[0,0],[0,0]];this.rcards=[];this.rstats=[];
-    this.ev=[];this.shake=0;this.slow=0;this.call='';this.callT=0;this.sprawlW=null;this.fhl=null;this.res=null;this.lastStand=null;
+    this.ctEnd=-9;this.ev=[];this.shake=0;this.slow=0;this.call='';this.callT=0;this.sprawlW=null;this.fhl=null;this.res=null;this.lastStand=null;
     this.inp={dir:0,B:false};this.taps=[];
   }
   get human(){return this.F.find(F=>F.human)||null}
@@ -78,7 +78,7 @@ class LiveFight{
 
   /* ---------------- main loop ---------------- */
   update(dt){
-    this.T+=dt;if(this.slow>0)this.slow-=dt;if(this.shake>0)this.shake=Math.max(0,this.shake-dt*18);if(this.callT>0)this.callT-=dt;
+    dt*=LV.PACE;this.T+=dt;if(this.slow>0)this.slow-=dt;if(this.shake>0)this.shake=Math.max(0,this.shake-dt*18);if(this.callT>0)this.callT-=dt;
     if(this.phase==='intro'){this.pt+=dt;if(this.pt>1.4){this.phase='fight';this.emit('bell');this.say(this.round===1?'Here we go!':`Round ${this.round}. Fight!`)}return}
     if(this.phase!=='fight'){this.pt+=dt;for(const F of this.F){F.vx*=.85;if(F.act&&this.phase==='end')F.act=null}return}
     this.clock-=dt*LV.TS;this.el+=dt*LV.TS;
@@ -184,7 +184,7 @@ class LiveFight{
         const reach=m.rng*(1+(A.f.r.str-60)/700);if(gap>reach)return this.whiff(A);
         if(D.inv>0){this.say(`${D.name} slips it.`);this.emit('whoosh',{x:D.x});return}}
     }
-    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.86:1);
+    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.8:1);
     if(!A.human&&D.human)dmg*=this.diff.dmg;
     const shooting=this.pos==='stand'&&D.act&&D.act.k==='shoot'&&D.act.ph!=='r'&&!D.act.done;
     if(shooting&&m.pow){ // timed a power shot or knee into a level change
@@ -284,6 +284,7 @@ class LiveFight{
     a.x=mid-9;b.x=mid+9;a.face=1;b.face=-1;for(const X of this.F){X.act=null;X.inv=.3;X.down=0;X.vx=0}this.say(msg)}
 
   contest(kind,A,D){
+    if(!A.human&&this.T-this.ctEnd<LV.BREATH*(D.human?1:.5))return;
     const s=kind==='getup'||kind==='trip'||kind==='lock'||kind==='snap'?'wre':'grp';
     const s2=kind==='snap'?'grp':kind==='guil'?'grp':s;
     let need={adv:.55,sweep:.58,escape:.54,getup:.57,trip:.54,lock:.54,sub:.66,snap:.42,guil:.66}[kind],sub=null,g=this.g;
@@ -314,7 +315,7 @@ class LiveFight{
       const rate=6.4*(F.o.human?this.diff.rate:1)*(.55+.45*F.sta/100);
       const fk='f'+k;c[fk]+=rate*dt*(.75+Math.random()*.5);while(c[fk]>=1){c[fk]--;c[k]++;F.sta=Math.max(0,F.sta-.3)}}
     if(c.t>=c.dur)this.resolveContest()}
-  resolveContest(){const c=this.ct,A=c.A,D=c.D,sh=this.share(),win=sh>c.need,g=this.g;this.ct=null;this.idle=0;
+  resolveContest(){const c=this.ct,A=c.A,D=c.D,sh=this.share(),win=sh>c.need,g=this.g;this.ct=null;this.idle=0;this.ctEnd=this.T;if(this.g)this.g.lull=Math.min(this.g.lull||0,0);
     this.emit('contestEnd',{win,human:A.human?win:D.human?!win:null});
     switch(c.kind){
       case'adv':if(win){g.pos=GPOS[GPOS.indexOf(g.pos)+1];g.t=0;this.pts(A,3);this.say(`${A.name} moves to ${GPN[g.pos]}.`)}
@@ -348,6 +349,7 @@ class LiveFight{
     if(F.block&&!wasB)F.blockT0=this.T;
     while(this.taps.length){const k=this.taps.shift();
       if(this.ct){if(k!=='L'&&k!=='R'&&k!=='dodge')this.tap(F);continue}
+      if(this.T-this.ctEnd<LV.TAPGRACE)continue;
       if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k!=='L'&&k!=='R')this.doAct(F,k)}
     if(this.pos==='ground'&&this.g.top===F&&!this.ct){
       this.g.leave=this.inp.dir!==0?this.g.leave+dt:0;
@@ -362,7 +364,7 @@ class LiveFight{
     if(this.pos==='stand'&&O.act&&O.act.ph==='w'&&(O.act.m.dmg||O.act.k==='shoot')&&A.seen!==O.act){A.seen=O.act;A.react=D.react*(.8+Math.random()*.5)}
     if(A.react>0){A.react-=dt;if(A.react<=0&&O.act&&O.act===A.seen&&O.act.ph!=='r')this.aiReact(F,O,D)}
     if(!O.act)A.seen=null;
-    if(A.t>0)return;A.t=D.think*(.7+Math.random()*.6);
+    if(A.t>0)return;A.t=D.think*(.7+Math.random()*.6)*(this.pos==='ground'?1.5:1);
     if(this.pos==='stand')this.aiStand(F,O,D,st);else if(this.pos==='clinch')this.aiClinch(F,O,D,st);else this.aiGround(F,O,D,st);
   }
   aiReact(F,O,D){const gap=Math.abs(F.x-O.x);if(gap>(O.act.m.rng||12)+4)return;
