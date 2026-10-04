@@ -1,0 +1,17 @@
+{
+  "name": "Championship Rounds",
+  "short_name": "Champ Rounds",
+  "description": "An MMA simulation game. Build a fighter's career or run a fight promotion as its matchmaker.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b1917",
+  "theme_color": "#1b1917",
+  "categories": ["games", "sports"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

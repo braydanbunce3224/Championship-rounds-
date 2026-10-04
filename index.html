@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Championship Rounds</title>
+<meta name="description" content="An MMA simulation game. Build a fighter's career through training camps, or run a fight promotion as its matchmaker.">
+<meta name="theme-color" content="#1b1917">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Champ Rounds">
+<meta property="og:title" content="Championship Rounds">
+<meta property="og:description" content="Build a fighter's career or run a fight promotion. An MMA sim from SpecMagic Games.">
+<meta property="og:image" content="icons/icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app"></div>
+<noscript><p style="padding:24px;color:#f4efe7;background:#1b1917;font-family:sans-serif">Championship Rounds needs JavaScript turned on.</p></noscript>
+<script src="js/game.js"></script>
+<script>
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
