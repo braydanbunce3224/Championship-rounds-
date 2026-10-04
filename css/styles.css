@@ -389,6 +389,10 @@ input[type=text]::placeholder{color:var(--faint)}
 .ldia{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);grid-template-areas:". j ." "s . p" ". k .";width:100%;min-width:0;align-self:center;justify-self:center}
 .ldia .kj{grid-area:j}.ldia .kp{grid-area:p}.ldia .kk{grid-area:k}.ldia .ks{grid-area:s}
 .ldia .lbtn{width:116%;aspect-ratio:1;border-radius:50%;align-self:center;justify-self:center}
+.ldia .lbtn{min-width:0;max-width:116%;overflow:hidden;padding:0 6%;container-type:inline-size}
+.ldia .lbtn b{font-size:min(12.5px,var(--fz,19cqi))}.ldia .lbtn small{font-size:min(9px,13cqi)}
+.ldia .lbtn b,.ldia .lbtn small{max-width:100%;overflow:hidden;text-overflow:clip;text-align:center}
+.ldia .lbtn small{white-space:normal;line-height:1.1}
 .ltapzone{position:absolute;inset:8px 12px calc(10px + env(safe-area-inset-bottom,0px));z-index:3;display:grid;place-items:center;background:radial-gradient(circle,#2b2213,rgba(12,10,8,.95) 70%);border-radius:20px;border:2px solid var(--acc);box-shadow:0 0 30px rgba(233,181,60,.25) inset;touch-action:none}
 .ltz{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--acc);pointer-events:none}
 .ltz span svg{width:46px;height:46px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}

@@ -26,9 +26,9 @@ const LSTYLE={
   Striker:{w:{jab:.34,cross:.24,hook:.14,over:.05,lkick:.1,hkick:.05,shoot:.04,clinch:.04},want:16,ag:.62},
   Kickboxer:{w:{jab:.24,cross:.14,hook:.1,over:.02,lkick:.26,hkick:.17,shoot:.03,clinch:.04},want:18,ag:.6},
   Brawler:{w:{jab:.1,cross:.26,hook:.24,over:.24,lkick:.05,hkick:.03,shoot:.04,clinch:.04},want:13,ag:.72},
-  Wrestler:{w:{jab:.28,cross:.14,hook:.08,over:.03,lkick:.05,hkick:0,shoot:.3,clinch:.12},want:14,ag:.55},
-  BJJ:{w:{jab:.3,cross:.14,hook:.08,over:.02,lkick:.08,hkick:.02,shoot:.26,clinch:.1},want:15,ag:.5},
-  'All-rounder':{w:{jab:.3,cross:.2,hook:.12,over:.05,lkick:.1,hkick:.05,shoot:.12,clinch:.06},want:16,ag:.58}
+  Wrestler:{w:{jab:.28,cross:.14,hook:.08,over:.03,lkick:.05,hkick:0,shoot:.21,clinch:.1},want:14,ag:.55},
+  BJJ:{w:{jab:.3,cross:.14,hook:.08,over:.02,lkick:.08,hkick:.02,shoot:.18,clinch:.08},want:15,ag:.5},
+  'All-rounder':{w:{jab:.3,cross:.2,hook:.12,over:.05,lkick:.1,hkick:.05,shoot:.08,clinch:.05},want:16,ag:.58}
 };
 const LDIFF={
   easy:{react:.45,block:.25,ag:.75,rate:.68,dmg:.82,sprawl:.32,think:.34,win:.55},
@@ -50,7 +50,7 @@ function mkLF(f,side,human){const r=f.r;
   return{f,side,human,name:f.last,x:LV.W/2+(side?15:-15),face:side?-1:1,vx:0,
     head:100,headMax:100,body:100,legs:100,sta:100,
     act:null,queue:null,qT:0,block:false,hurt:0,stag:0,down:0,inv:0,stuff:0,dodge:0,sprawl:false,
-    kdR:0,legKD:0,unans:0,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
+    kdR:0,legKD:0,unans:0,blockT0:-9,open:0,shootCD:0,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
     spd:1.12-(r.str-50)/250,mv:24*(.85+r.car/400+(r.str-50)/500),
     ai:{t:.4+Math.random()*.3,dir:0,blockT:0,react:0,seen:null},
     st:{thrown:0,landed:0,kd:0,td:0,tda:0,sub:0,ctrl:0,head:0,body:0,legs:0,blocked:0},
@@ -64,7 +64,7 @@ class LiveFight{
     this.round=1;this.clock=this.rounds[0]*60;this.el=0;this.phase='intro';this.pt=0;this.T=0;
     this.pos='stand';this.g=null;this.ct=null;this.idle=0;
     this.rp=[[0,0]];this.rkd=[[0,0]];this.log=[[]];this.cards=[[0,0],[0,0],[0,0]];this.rcards=[];this.rstats=[];
-    this.ev=[];this.shake=0;this.slow=0;this.call='';this.callT=0;this.sprawlW=null;this.res=null;
+    this.ev=[];this.shake=0;this.slow=0;this.call='';this.callT=0;this.sprawlW=null;this.fhl=null;this.res=null;this.lastStand=null;
     this.inp={dir:0,B:false};this.taps=[];
   }
   get human(){return this.F.find(F=>F.human)||null}
@@ -90,14 +90,17 @@ class LiveFight{
     this.physics(dt);
     if(this.pos!=='stand'&&!this.ct){this.idle+=dt;
       if(this.pos==='clinch'&&this.idle>4.5)this.breakClinch('The referee breaks the clinch.');
-      else if(this.pos==='ground'&&(this.idle>7||(this.g&&this.g.t>(this.g.pos==='guard'?14:20))))this.standUp(this.idle>7?'No action. The referee stands them up.':'The referee stands them up.')}
-    if(this.pos==='ground'&&this.g){this.g.t=(this.g.t||0)+dt;this.pts(this.g.top,dt*.3);this.g.top.st.ctrl+=dt*LV.TS}
+      else if(this.pos==='ground')this.refGround(dt)}
+    if(this.pos==='ground'&&this.g){const g=this.g;g.t=(g.t||0)+dt;g.all=(g.all||0)+dt;this.pts(g.top,dt*.25);g.top.st.ctrl+=dt*LV.TS;
+      // holding someone down costs the top man gas too; the bottom man slowly builds scramble momentum
+      g.top.sta=Math.max(0,g.top.sta-dt*1.6);g.mom=Math.min(.16,(g.mom||0)+dt*.006)}
+    if(this.fhl&&this.T>this.fhl.until)this.fhl=null;
     if(this.sprawlW&&this.T>this.sprawlW.until)this.sprawlW=null;
     if(this.clock<=0&&this.phase==='fight')this.endRound();
   }
   updF(F,dt){
     F.lastAtkT+=dt;F.hitT+=dt;
-    if(F.inv>0)F.inv-=dt;if(F.hurt>0)F.hurt-=dt;if(F.stag>0)F.stag-=dt;if(F.stuff>0)F.stuff-=dt;if(F.dodge>0)F.dodge-=dt;
+    if(F.inv>0)F.inv-=dt;if(F.hurt>0)F.hurt-=dt;if(F.stag>0)F.stag-=dt;if(F.stuff>0)F.stuff-=dt;if(F.dodge>0)F.dodge-=dt;if(F.open>0)F.open-=dt;if(F.scrCD>0)F.scrCD-=dt;if(F.shootCD>0)F.shootCD-=dt;
     if(F.down>0){F.down-=dt;if(F.down<=0&&this.pos==='stand'){F.head=Math.min(F.headMax,F.head+10);F.inv=.5;F.stag=Math.max(F.stag,.8);this.say(`${F.name} beats the count and gets up.`)}}
     const moving=Math.abs(F.vx)>2,busy=!!F.act;
     const reg=13*(.55+F.f.r.car/150)*(.45+.55*F.body/100)*(F.block?.55:1)*(moving?.75:1)*(busy?.3:1)*(this.pos==='ground'?.8:1)*(this.ct?.2:1);
@@ -118,6 +121,11 @@ class LiveFight{
         if(gap<17&&k!=='K'&&k!=='Kc')return this.pounce(F);
         if(F.human&&(k==='K'||k==='Kc'))this.flash(this.ring?'Get closer':'No kicks to a downed fighter');
         return}
+      if(this.fhl&&this.fhl.side===F.side&&gap<16){
+        if(k==='S')return this.frontHeadlock(F,'snap');
+        if(k==='Pc')return this.frontHeadlock(F,'guil');
+        if(k==='K'||k==='Kc'){this.fhl=null;return this.startAct(F,'knee')}}
+      if(k==='S'&&O.act&&O.act.m.kick&&O.act.ph!=='r'&&gap<=O.act.m.rng+3)return this.catchKick(F,O);
       if(k==='J')return this.startAct(F,'jab');
       if(k==='P'){const m=F.lastAtk==='jab'&&F.lastAtkT<.7?'cross':F.lastAtk==='cross'&&F.lastAtkT<.8?'hook':(F.combo++%2?'hook':'cross');return this.startAct(F,m)}
       if(k==='Pc')return this.startAct(F,'over');
@@ -139,7 +147,7 @@ class LiveFight{
         if(k==='J')return this.startAct(F,'bstrike');
         if(k==='P'||k==='Pc'){if(g.pos!=='guard'&&g.pos!=='half'){if(F.human)this.flash('No submissions from here');return}return this.contest('sub',F,O)}
         if(k==='S')return this.contest(g.pos==='guard'?'sweep':'escape',F,O);
-        if(k==='K'||k==='Kc'){if(g.pos!=='guard'&&g.pos!=='half'){if(F.human)this.flash('Escape to guard first');return}return this.contest('getup',F,O)}
+        if(k==='K'||k==='Kc'){if(g.pos==='mount'||g.pos==='back'){if(F.human)this.flash('Escape first');return}return this.contest('getup',F,O)}
       }
     }
   }
@@ -176,12 +184,21 @@ class LiveFight{
         const reach=m.rng*(1+(A.f.r.str-60)/700);if(gap>reach)return this.whiff(A);
         if(D.inv>0){this.say(`${D.name} slips it.`);this.emit('whoosh',{x:D.x});return}}
     }
-    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100);
+    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.86:1);
     if(!A.human&&D.human)dmg*=this.diff.dmg;
-    const counter=!!(D.act&&D.act.ph==='w'&&D.act.m.dmg);
-    if(counter)dmg*=1.35;
+    const shooting=this.pos==='stand'&&D.act&&D.act.k==='shoot'&&D.act.ph!=='r'&&!D.act.done;
+    if(shooting&&m.pow){ // timed a power shot or knee into a level change
+      D.act=null;D.vx=0;D.stuff=.7;this.sprawlW=null;A.sprawl=false;dmg*=1.35;
+      this.say(k==='knee'?`Knee right down the middle as ${D.name} shoots!`:`${A.name} meets the shot with a ${m.nm}!`,true);
+      if(A.human)this.flash('Counter!');return this.applyDmg(A,D,m,k,dmg,false,true)}
+    const counter=!!(D.act&&D.act.ph==='w'&&D.act.m.dmg)||D.open>0;
+    if(counter)dmg*=D.open>0&&!(D.act&&D.act.ph==='w')?1.18:1.3;
+    // parry: guard raised just before the strike lands
+    if(this.pos==='stand'&&D.block&&!D.act&&D.down<=0&&k!=='soccer'&&m.tgt!=='legs'&&this.T-D.blockT0<.22){
+      D.st.blocked++;this.idle=0;A.open=.6;A.sta=Math.max(0,A.sta-2);this.pts(D,1);
+      this.emit('block',{x:D.x,y:-25,F:D});this.say(`${D.name} parries it and ${A.name} is open!`);if(D.human)this.flash('Parry! Counter now');return}
     if(this.pos==='ground'&&this.g.top===A)dmg*=GMULT[this.g.pos];
-    const canBlock=D.block&&!D.act&&D.down<=0&&k!=='soccer';
+    const canBlock=D.block&&!D.act&&D.down<=0&&k!=='soccer'&&!(D.open>0);
     if(canBlock){D.st.blocked++;this.idle=0;
       if(m.tgt==='legs'){A.legs=Math.max(0,A.legs-4);D.legs=Math.max(0,D.legs-1);this.emit('block',{x:D.x,y:-8,F:D});this.say(`${D.name} checks the leg kick.`);this.pts(D,1);return}
       dmg*=this.pos==='ground'?.32:.2;D.sta=Math.max(0,D.sta-3);this.emit('block',{x:D.x,y:m.tgt==='body'?-17:-25,F:D});
@@ -193,6 +210,7 @@ class LiveFight{
     if(m.tgt==='head'){dmg*=1.27-D.f.r.chn/110;D.head-=dmg;D.headMax=Math.max(30,D.headMax-dmg*.22)}
     else if(m.tgt==='body'){D.body=Math.max(0,D.body-dmg*1.1);D.sta=Math.max(0,D.sta-dmg*.8)}
     else D.legs=Math.max(0,D.legs-dmg);
+    if(this.pos==='ground'&&this.g){const g=this.g;if(blocked){if(g.top===A)g.mom=Math.min(.16,(g.mom||0)+.008)}else if(g.top===A&&dmg>=2){g.lull=0;g.mom=Math.max(0,(g.mom||0)-.006*dmg)}}
     if(blocked)return;
     A.st.landed++;A.st[m.tgt]++;D.hitT=0;this.idle=0;this.pts(A,m.pts*(counter?1.4:1));
     const hy=m.tgt==='head'?-26:m.tgt==='body'?-17:-6;
@@ -207,7 +225,7 @@ class LiveFight{
     if(this.pos==='ground'){const g=this.g;
       if(g.top===A&&((D.head<17&&g.unans>=5)||(g.pounce&&g.t<5&&D.head<18&&g.unans>=4)))return this.finish(A,g.pounce?'TKO (punches)':'TKO (ground and pound)');
       return}
-    if(m.pow){const ch=clamp((dmg-5.5)/58+(45-D.head)/130-(D.f.r.chn-60)/230+(counter?.05:0),0,.45);if(Math.random()<ch)return this.knockdown(A,D,m)}
+    if(m.pow){const ch=clamp((dmg-6)/62+(42-D.head)/135-(D.f.r.chn-60)/230+(counter?.04:0),0,.4);if(Math.random()<ch)return this.knockdown(A,D,m)}
     if(k==='soccer'&&D.head<32)return this.finish(A,'TKO (soccer kicks)');
     if(D.head<34&&m.pow&&D.stag<=0){D.stag=1.1;this.say(`${D.name} is hurt!`,true)}
     if(D.stag>0&&D.head<10&&A.unans>=4)return this.finish(A,'TKO (punches)');
@@ -226,12 +244,13 @@ class LiveFight{
   /* ---------------- grappling ---------------- */
   takedown(A,D){
     const counter=!!(D.act&&D.act.ph!=='r'&&D.act.m.dmg),spr=D.sprawl;
-    let p=.42+(A.f.r.wre-D.f.r.wre)/75+(counter?.25:0)+(D.sta<30?.1:0)-(A.sta<25?.15:0)-(spr?.42:0)+(D.stag>0?.15:0)-(this.ring?.03:0);
-    p=clamp(p,.05,.93);D.sprawl=false;this.sprawlW=null;
+    let p=.33+(A.f.r.wre-D.f.r.wre)/75+(counter?.25:0)+(D.sta<30?.1:0)-(A.sta<25?.15:0)-(spr?.42:0)+(D.stag>0?.15:0)-(this.ring?.03:0)-(D.block&&!spr?.08:0)+(A.tdTry>=3?-.05:0);
+    p=clamp(p,.05,.9);D.sprawl=false;this.sprawlW=null;A.shootCD=4+Math.random()*3.5;A.tdTry=(A.tdTry||0)+1;
     if(Math.random()<p){this.toGround(A,D,A.f.r.wre>D.f.r.wre+8&&Math.random()<.4?'half':'guard');A.st.td++;this.pts(A,5);
       this.emit('slam',{x:A.x});this.shake=3;this.say(counter?`${A.name} times the shot perfectly. Takedown!`:`Takedown ${A.name}!`,true)}
-    else{A.act=null;A.vx=0;A.stuff=.5;A.x-=A.face*4;this.pts(D,1);this.emit('block',{x:D.x,y:-12,F:D});
-      this.say(spr?`${D.name} sprawls and stuffs the shot.`:`${D.name} defends the takedown.`);if(spr&&D.human)this.flash('Stuffed it!')}
+    else{A.act=null;A.vx=0;A.stuff=spr?.85:.5;A.x-=A.face*(spr?2:4);this.pts(D,spr?2:1);this.emit('block',{x:D.x,y:-12,F:D});A.sta=Math.max(0,A.sta-(spr?6:2));
+      if(spr){A.open=.7;this.fhl={side:D.side,until:this.T+.9};this.say(`${D.name} sprawls and stuffs the shot. He has the front headlock!`);if(D.human)this.flash('Stuffed! Shoot: go behind · Hold Power: guillotine')}
+      else this.say(`${D.name} defends the takedown.`)}
   }
   clinch(F){const O=F.o,p=.62+(F.f.r.wre-O.f.r.wre)/120;F.sta-=4;
     if(Math.random()<p){this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.queue=null}
@@ -242,24 +261,48 @@ class LiveFight{
     if(Math.random()<p)this.breakClinch(`${F.name} breaks away.`);else{F.stuff=.35;this.say(`${F.o.name} keeps him tied up.`)}}
   breakClinch(msg){this.pos='stand';this.idle=0;const [a,b]=this.F,mid=(a.x+b.x)/2;
     a.x=clamp(mid-a.face*8,LV.L,LV.R);b.x=clamp(mid-b.face*8,LV.L,LV.R);for(const X of this.F){X.act=null;X.inv=.25}this.say(msg)}
-  toGround(top,bot,pos){this.pos='ground';this.idle=0;this.g={top,bot,pos,unans:0,leave:0,pounce:false};
+  catchKick(F,O){const a=O.act,head=a.k==='hkick';F.sta-=5;F.block=false;
+    let p=.5+(F.f.r.wre-O.f.r.wre)/90+(F.f.r.str-O.f.r.str)/200-(head?.18:0)+(a.ph==='a'?.08:0);p=clamp(p,.15,.85);
+    if(Math.random()<p){O.act=null;O.vx=0;F.st.tda++;
+      if(Math.random()<.62+(F.f.r.wre-60)/150){this.toGround(F,O,Math.random()<.35?'half':'guard');F.st.td++;this.pts(F,5);this.emit('slam',{x:F.x});this.shake=3;this.say(`${F.name} catches the kick and dumps ${O.name}!`,true)}
+      else{O.open=.6;O.stuff=.5;this.pts(F,2);this.say(`${F.name} catches the kick! ${O.name} is hopping on one leg.`);if(F.human)this.flash('Caught it! Hit him')}}
+    else{F.stuff=.35;this.say(`${O.name} pulls the kick back in time.`)}}
+  frontHeadlock(F,kind){const O=F.o;this.fhl=null;O.act=null;O.vx=0;
+    this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.queue=null}
+    const mid=clamp((F.x+O.x)/2,LV.L+5,LV.R-5);F.x=mid-F.face*4.5;O.x=mid+F.face*4.5;
+    this.contest(kind,F,O)}
+  refGround(dt){const g=this.g;if(!g)return;g.lull=(g.lull||0)+dt;
+    const hurt=g.bot.head<38,cap=(g.pos==='guard'?9:g.pos==='half'?11:14)+(hurt?5:0);
+    if(g.lull>2.6&&!g.warn){g.warn=1;this.say(`Referee: "Work! Improve your position!"`)}
+    if(g.lull>4.2)return this.standUp('Nothing happening. The referee stands them up.','ref');
+    if(g.t>cap)return this.standUp('Stalemate on the mat. The referee brings them back up.','ref')}
+  toGround(top,bot,pos){this.pos='ground';this.idle=0;this.g={top,bot,pos,unans:0,leave:0,pounce:false,lull:0,mom:0,t:0,all:0};
     for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.down=0;X.queue=null;X.stag=0}
     const mid=clamp(bot.x,LV.L+16,LV.R-16);bot.x=mid;top.x=mid}
   pounce(F){const O=F.o;O.head=Math.min(O.headMax,O.head+8);this.toGround(F,O,Math.random()<.45?'guard':Math.random()<.5?'side':'mount');this.g.pounce=true;this.say(`${F.name} pounces on him!`,true)}
-  standUp(msg){this.pos='stand';this.g=null;this.idle=0;const [a,b]=this.F,mid=clamp((a.x+b.x)/2,LV.L+10,LV.R-10);
+  standUp(msg,why){this.lastStand=why||'other';for(const X of this.F)X.shootCD=Math.max(X.shootCD,2.5+Math.random()*2.5);this.pos='stand';this.g=null;this.idle=0;this.fhl=null;const [a,b]=this.F,mid=clamp((a.x+b.x)/2,LV.L+10,LV.R-10);
     a.x=mid-9;b.x=mid+9;a.face=1;b.face=-1;for(const X of this.F){X.act=null;X.inv=.3;X.down=0;X.vx=0}this.say(msg)}
 
   contest(kind,A,D){
-    const s=kind==='getup'||kind==='trip'||kind==='lock'?'wre':'grp';
-    let need={adv:.55,sweep:.57,escape:.53,getup:.53,trip:.54,lock:.54,sub:.66}[kind],sub=null;
-    if(kind==='sub'){const pos=this.g.pos;sub=pick(LSUBS[pos]||LSUBS.guard);
-      need=.69-({back:.06,mount:.04,side:.02}[pos]||0)-(D.head<40?.03:0)-(D.sta<30?.03:0)+(this.g.bot===A?.04:0);A.st.sub++;this.pts(A,2)}
+    const s=kind==='getup'||kind==='trip'||kind==='lock'||kind==='snap'?'wre':'grp';
+    const s2=kind==='snap'?'grp':kind==='guil'?'grp':s;
+    let need={adv:.55,sweep:.58,escape:.54,getup:.57,trip:.54,lock:.54,sub:.66,snap:.42,guil:.66}[kind],sub=null,g=this.g;
+    if(kind==='getup'&&g&&g.pos==='side')need+=.07;
+    if(kind==='sub'){const pos=g.pos;sub=pick(LSUBS[pos]||LSUBS.guard);
+      need=.69-({back:.06,mount:.04,side:.02}[pos]||0)-(D.head<40?.03:0)-(D.sta<30?.03:0)+(g.bot===A?.04:0);A.st.sub++;this.pts(A,2)}
+    if(kind==='guil'){sub='guillotine';need-=(D.sta<35?.04:0);A.st.sub++;this.pts(A,2)}
+    if(g&&g.bot===A&&(kind==='sweep'||kind==='escape'||kind==='getup'||kind==='sub')){
+      need-=g.mom||0;                                   // scramble momentum from failed tries, blocked shots and the top man's fatigue
+      need-=Math.max(0,(40-g.top.sta)/400);             // a tired top man can't hold him down
+      const ta=D.act;if(ta&&ta.ph==='w'&&ta.m.pow){need-=.07;if(A.human)this.flash('Timed it!')}}  // explode while he loads up an elbow
+    if(g&&g.top===A&&kind==='adv')need+=Math.min(.05,(g.mom||0)*.4);
+    g&&(g.lull=0);
     if(kind==='trip'||kind==='lock')A.st.tda++;
     for(const X of this.F){X.act=null;X.block=false;X.queue=null}
     A.sta=Math.max(0,A.sta-4);this.idle=0;
-    const nxt=this.g?GPOS[GPOS.indexOf(this.g.pos)+1]:null;
-    const label={adv:`Passing to ${GPN[nxt]||''}`,sweep:'Sweep attempt',escape:'Escape attempt',getup:'Getting back up',sub:(sub||'').toUpperCase(),trip:'Trip takedown',lock:'Body-lock takedown'}[kind];
-    this.ct={kind,A,D,t:0,dur:{adv:1.15,sweep:1.15,escape:1.1,getup:1.2,sub:2.3,trip:.95,lock:1.1}[kind],a:0,d:0,fa:0,fd:0,need,s,sub,label};
+    const nxt=this.g&&kind==='adv'?GPOS[GPOS.indexOf(this.g.pos)+1]:null;
+    const label={adv:`Passing to ${GPN[nxt]||''}`,sweep:'Sweep attempt',escape:'Escape attempt',getup:this.g&&this.g.pos==='side'?'Wall-walking up':'Getting back up',sub:(sub||'').toUpperCase(),snap:'Going behind',guil:'GUILLOTINE',trip:'Trip takedown',lock:'Body-lock takedown'}[kind];
+    this.ct={kind,A,D,t:0,dur:{adv:1.15,sweep:1.15,escape:1.1,getup:1.2,sub:2.3,trip:.95,lock:1.1,snap:.9,guil:2}[kind],a:0,d:0,fa:0,fd:0,need:clamp(need,.3,.8),s:s2,sub,label};
     this.emit('contest',{sub:!!sub});
     if(sub)this.say(`${A.name} goes for ${/^[aeiou]/.test(sub)?'an':'a'} ${sub}!`,true);
   }
@@ -274,13 +317,24 @@ class LiveFight{
   resolveContest(){const c=this.ct,A=c.A,D=c.D,sh=this.share(),win=sh>c.need,g=this.g;this.ct=null;this.idle=0;
     this.emit('contestEnd',{win,human:A.human?win:D.human?!win:null});
     switch(c.kind){
-      case'adv':if(win){g.pos=GPOS[GPOS.indexOf(g.pos)+1];g.t=0;this.pts(A,3);this.say(`${A.name} moves to ${GPN[g.pos]}.`)}else{A.sta-=3;this.say(`${D.name} keeps him in ${GPN[g.pos]}.`)}break;
-      case'sweep':if(win){g.top=A;g.bot=D;g.pos='half';g.t=0;g.unans=0;g.pounce=false;this.pts(A,4);this.say(`Sweep! ${A.name} reverses the position.`,true)}else this.say(`${D.name} stays on top.`);break;
-      case'escape':if(win){g.pos={half:'guard',side:'half',mount:'half',back:'guard'}[g.pos]||'guard';g.unans=0;this.pts(A,2);this.say(`${A.name} recovers ${GPN[g.pos]}.`)}else this.say(`${D.name} holds him down.`);break;
-      case'getup':if(win)this.standUp(`${A.name} scrambles back to his feet.`);else this.say(`${D.name} keeps him on the mat.`);break;
+      case'adv':if(win){g.pos=GPOS[GPOS.indexOf(g.pos)+1];g.t=0;this.pts(A,3);this.say(`${A.name} moves to ${GPN[g.pos]}.`)}
+        else{A.sta-=4;g.mom=Math.min(.16,(g.mom||0)+.03);
+          if(sh<c.need-.18&&Math.random()<.5){if(g.pos==='guard'||g.pos==='half'){this.pts(D,2);return this.standUp(`${D.name} uses the space and scrambles up!`,'getup')}
+            g.pos=g.pos==='side'?'half':'guard';this.say(`${D.name} uses the space to recover ${GPN[g.pos]}.`)}
+          else this.say(`${D.name} keeps him in ${GPN[g.pos]}.`)}break;
+      case'sweep':A.scrCD=.8;if(win){g.top=A;g.bot=D;g.pos='half';g.t=0;g.unans=0;g.pounce=false;g.mom=0;this.pts(A,4);this.say(`Sweep! ${A.name} reverses the position.`,true)}else{g.mom=Math.min(.16,(g.mom||0)+.025);this.say(`${D.name} stays on top.`)}break;
+      case'escape':A.scrCD=.8;if(win){g.pos={half:'guard',side:'half',mount:'half',back:'guard'}[g.pos]||'guard';g.unans=0;g.t=Math.min(g.t,4);g.mom=Math.min(.16,(g.mom||0)+.02);this.pts(A,2);this.say(`${A.name} recovers ${GPN[g.pos]}.`)}else{g.mom=Math.min(.16,(g.mom||0)+.025);this.say(`${D.name} holds him down.`)}break;
+      case'getup':A.scrCD=1;if(win){this.pts(A,2);this.standUp(`${A.name} scrambles back to his feet.`,'getup')}else{g.mom=Math.min(.16,(g.mom||0)+.03);this.say(`${D.name} drags him back down.`)}break;
+      case'snap':if(win){this.toGround(A,D,Math.random()<.4?'back':'side');A.st.td++;this.pts(A,5);this.emit('slam',{x:A.x});this.shake=2;this.say(`${A.name} spins behind and takes ${GPN[this.g.pos]}!`,true)}
+        else this.breakClinch(`${D.name} pops his head out.`);break;
+      case'guil':if(win)return this.finish(A,'Submission (guillotine)');
+        this.toGround(D,A,'guard');this.say(`${D.name} pops his head free and lands on top!`,true);break;
       case'sub':if(win)return this.finish(A,`Submission (${c.sub})`);
         A.sta=Math.max(0,A.sta-10);this.say(`${D.name} escapes the ${c.sub}.`,true);
-        if(g.bot===A&&g.pos==='guard'&&Math.random()<.45){g.pos='half';this.say(`${D.name} passes to half guard.`)}break;
+        if(g.bot===A&&g.pos==='guard'&&Math.random()<.45){g.pos='half';this.say(`${D.name} passes to half guard.`)}
+        else if(g.top===A){const r=Math.random();g.mom=Math.min(.16,(g.mom||0)+.04);  // over-committing on top opens scrambles
+          if(r<.3&&(g.pos==='mount'||g.pos==='side')){g.top=D;g.bot=A;g.pos='guard';g.t=0;g.unans=0;this.pts(D,3);this.say(`${D.name} rolls through and ends up on top!`,true)}
+          else if(r<.55){this.pts(D,2);return this.standUp(`${D.name} escapes out the back and stands up!`,'getup')}}break;
       case'trip':case'lock':if(win){this.toGround(A,D,c.kind==='lock'&&A.f.r.wre>D.f.r.wre?'half':'guard');A.st.td++;this.pts(A,5);this.emit('slam',{x:A.x});this.shake=3;this.say(`${A.name} ${c.kind==='trip'?'trips him to the mat':'locks the body and takes him down'}!`,true)}
         else{this.say(`${D.name} defends the takedown.`);if(Math.random()<.35)this.breakClinch(`They break apart.`)}break;
     }
@@ -288,25 +342,32 @@ class LiveFight{
 
   /* ---------------- control ---------------- */
   humanCtl(F,dt){
+    const wasB=F.block;
     if(this.pos==='stand'||this.pos==='clinch')F.block=this.inp.B&&!F.act&&F.down<=0&&!this.ct;
     else F.block=this.g&&this.g.bot===F&&this.inp.B&&!F.act&&!this.ct;
+    if(F.block&&!wasB)F.blockT0=this.T;
     while(this.taps.length){const k=this.taps.shift();
       if(this.ct){if(k!=='L'&&k!=='R'&&k!=='dodge')this.tap(F);continue}
       if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k!=='L'&&k!=='R')this.doAct(F,k)}
     if(this.pos==='ground'&&this.g.top===F&&!this.ct){
       this.g.leave=this.inp.dir!==0?this.g.leave+dt:0;
-      if(this.g.leave>.4)this.standUp(`${F.name} stands up and lets him back up.`)}
+      if(this.g.leave>.4)this.standUp(`${F.name} stands up and lets him back up.`,'topstand')}
   }
   aiCtl(F,dt){const A=F.ai,O=F.o,D=this.aiD(F),st=LSTYLE[F.f.style]||LSTYLE['All-rounder'];
-    A.t-=dt;if(A.blockT>0){A.blockT-=dt;F.block=!F.act&&F.down<=0&&!this.ct&&(this.pos!=='ground'||this.g.bot===F)}else F.block=false;
+    A.t-=dt;const wasB=F.block;if(A.blockT>0){A.blockT-=dt;F.block=!F.act&&F.down<=0&&!this.ct&&(this.pos!=='ground'||this.g.bot===F)}else F.block=false;
+    if(F.block&&!wasB)F.blockT0=this.T-(Math.random()<.78?.3:0);
     if(this.ct)return;
-    if(this.pos==='stand'&&O.act&&O.act.ph==='w'&&O.act.m.dmg&&A.seen!==O.act){A.seen=O.act;A.react=D.react*(.8+Math.random()*.5)}
+    if(this.pos==='stand'&&this.fhl&&this.fhl.side===F.side&&this.canAct(F)&&Math.random()<dt*4){const r=Math.random(),gr=F.f.r.grp/70;
+      this.doAct(F,r<.3*gr?'Pc':r<.75?'S':'K');return}
+    if(this.pos==='stand'&&O.act&&O.act.ph==='w'&&(O.act.m.dmg||O.act.k==='shoot')&&A.seen!==O.act){A.seen=O.act;A.react=D.react*(.8+Math.random()*.5)}
     if(A.react>0){A.react-=dt;if(A.react<=0&&O.act&&O.act===A.seen&&O.act.ph!=='r')this.aiReact(F,O,D)}
     if(!O.act)A.seen=null;
     if(A.t>0)return;A.t=D.think*(.7+Math.random()*.6);
     if(this.pos==='stand')this.aiStand(F,O,D,st);else if(this.pos==='clinch')this.aiClinch(F,O,D,st);else this.aiGround(F,O,D,st);
   }
   aiReact(F,O,D){const gap=Math.abs(F.x-O.x);if(gap>(O.act.m.rng||12)+4)return;
+    if(O.act.k==='shoot'){if(this.canAct(F)&&gap<22&&Math.random()<D.block*.35*(.6+F.f.r.str/200))this.doAct(F,Math.random()<.5?'P':'Pc');return}
+    if(O.act.m.kick&&this.canAct(F)&&Math.random()<D.block*.22*(F.f.r.wre/70)){this.doAct(F,'S');return}
     const r=Math.random(),pb=D.block*(.6+F.f.r.str/250);
     if(r<pb){F.ai.blockT=.42;F.block=true}
     else if(r<pb+.12&&this.canAct(F))this.dodge(F);
@@ -319,14 +380,15 @@ class LiveFight{
     const ag=st.ag*D.ag*(O.stag>0?1.6:1)*(F.sta<40?.6:1)*(O.block?.85:1);
     if(Math.random()>ag||F.act)return;
     const opts=[];for(const [k,w] of Object.entries(st.w)){if(!w)continue;
-      if(k==='shoot'){if(gap>=12&&gap<=27)opts.push([k,w*(O.block?1.6:1)])}
+      if(k==='shoot'){if(gap>=12&&gap<=27&&F.shootCD<=0)opts.push([k,w*(O.block?1.6:1)*(F.tdTry>=4?.6:1)])}
       else if(k==='clinch'){if(gap<12)opts.push([k,w*3])}
       else if(gap<=LMV[k].rng+1)opts.push([k,w])}
     if(!opts.length){A.dir=1;return}
     let tot=opts.reduce((s,o)=>s+o[1],0),x=Math.random()*tot,ch=opts[0][0];for(const [k,w] of opts){x-=w;if(x<0){ch=k;break}}
     const key={jab:'J',cross:'P',hook:'P',over:'Pc',lkick:'K',hkick:'Kc',shoot:'S',clinch:'S'}[ch];
     this.doAct(F,key);
-    if(ch==='jab'&&Math.random()<.45){F.queue='P';F.qT=.4}}
+    if(ch==='jab'&&Math.random()<.45){F.queue='P';F.qT=.4}
+    if(O.open>0&&this.canAct(F)&&Math.random()<.45)this.doAct(F,Math.random()<.5?'P':'K')}
   aiClinch(F,O,D,st){const r=Math.random(),wr=F.f.style==='Wrestler'||F.f.style==='BJJ';
     if(F.sta<18){this.breakAttempt(F);return}
     if(r<.36)this.doAct(F,'P');else if(r<.64)this.doAct(F,'J');
@@ -339,14 +401,17 @@ class LiveFight{
       if(r<.32)return this.doAct(F,'J');if(r<.55)return this.doAct(F,'P');
       if(r<.55+.1*gr&&g.pos!=='back')return this.doAct(F,'S');
       if(r<.55+.1*gr+(bjj?.12:.05)*gr&&g.pos!=='guard')return this.doAct(F,'K');
-      if((F.f.style==='Striker'||F.f.style==='Kickboxer')&&g.pos==='guard'&&r>.95)return this.standUp(`${F.name} stands up and waves him back up.`);
+      if((F.f.style==='Striker'||F.f.style==='Kickboxer'||F.f.style==='Brawler')&&g.pos==='guard'&&g.t>2&&r>.9)return this.standUp(`${F.name} stands up and waves him back up.`,'topstand');
     }else{
+      const wr=F.f.r.wre/70,op=g.pos==='guard'||g.pos==='half',canUp=op||g.pos==='side';
+      if(O.act&&O.act.ph==='w'&&O.act.m.pow&&r<.45*wr&&canUp)return this.doAct(F,op?'K':'K'); // explode while he loads up
       if(O.act&&O.act.ph==='w'&&r<.5){F.ai.blockT=.45;F.block=true;return}
-      if(r<.36){F.ai.blockT=.55;F.block=true;return}
-      if(r<.42)return this.doAct(F,'J');
-      if(r<.42+.14*gr)return this.doAct(F,'S');
-      if(r<.42+.14*gr+.16*(F.f.r.wre/70)&&(g.pos==='guard'||g.pos==='half'))return this.doAct(F,'K');
-      if(r<.42+.14*gr+.16+(bjj?.12:.03)&&(g.pos==='guard'||g.pos==='half'))return this.doAct(F,'P');
+      if(F.scrCD>0||r<.38){F.ai.blockT=.55;F.block=true;return}
+      if(r<.46)return this.doAct(F,'J');
+      const pick2=Math.random();
+      if(bjj&&op&&pick2<.3)return this.doAct(F,'P');
+      if(canUp&&pick2<.3+.35*wr)return this.doAct(F,'K');
+      return this.doAct(F,'S');
     }}
 
   physics(dt){const [a,b]=this.F;
@@ -374,14 +439,14 @@ class LiveFight{
     this.rcards.push(sc);
     this.rstats.push(this.F.map(F=>({...F.st})));
     this.log[r].push({t:`Horn. Broadcast card: ${sc[1][0]}-${sc[1][1]} ${sc[1][0]>sc[1][1]?this.F[0].name:this.F[1].name}.`,rd:true});
-    this.emit('bell');this.ct=null;this.sprawlW=null;
+    this.emit('bell');this.ct=null;this.sprawlW=null;this.fhl=null;
     if(this.round>=this.rounds.length)return this.decision();
     this.phase='break';this.pt=0;this.say(`End of round ${this.round}.`)}
   nextRound(){if(this.phase!=='break')return;
     for(const F of this.F){F.head=Math.min(F.headMax,F.head+18);F.sta=Math.min(100,F.sta+50);F.body=Math.min(100,F.body+10);F.legs=Math.min(100,F.legs+8);
       F.act=null;F.queue=null;F.down=0;F.stag=0;F.hurt=0;F.kdR=0;F.unans=0;F.block=false;F.vx=0}
     this.round++;this.clock=this.rounds[this.round-1]*60;this.el=0;this.rp.push([0,0]);this.rkd.push([0,0]);this.log.push([]);
-    this.pos='stand';this.g=null;this.ct=null;this.idle=0;const [a,b]=this.F;a.x=LV.W/2-15;b.x=LV.W/2+15;a.face=1;b.face=-1;
+    this.pos='stand';this.g=null;this.ct=null;this.idle=0;this.fhl=null;this.lastStand='round';for(const F of this.F){F.tdTry=0;F.open=0}const [a,b]=this.F;a.x=LV.W/2-15;b.x=LV.W/2+15;a.face=1;b.face=-1;
     this.phase='intro';this.pt=0}
   decision(){const v=this.cards.map(c=>c[0]>c[1]?0:c[1]>c[0]?1:-1),a=v.filter(x=>x===0).length,b=v.filter(x=>x===1).length;let w,m;
     if(a===3||b===3){w=a===3?0:1;m='Unanimous decision'}else if((a===2&&b===1)||(b===2&&a===1)){w=a>b?0:1;m='Split decision'}
@@ -404,6 +469,9 @@ class LiveFight{
     if(O.head<45)tips.push("He's fading! Put him under pressure and throw your power shots.");
     if(s.legs>=5)tips.push("He keeps kicking your lead leg. Hold BLOCK when he throws it to check the kick.");
     if(s.tda>=2)tips.push("He wants the takedown. Tap BLOCK the moment he changes levels to sprawl.");
+    if(s.td>=2)tips.push("When you're on your back, keep scrambling. Every failed try tires him out, and exploding while he loads up an elbow works best.");
+    if(s.tda>=3&&ms.kd===0)tips.push("Time a POWER shot or knee as he shoots. It stops the takedown and can drop him.");
+    if(O.f.style==='Kickboxer')tips.push("He loves to kick. Tap SHOOT as the kick comes in to catch it.");
     if(me.sta<45)tips.push("You're gassing. Pick your shots and let your cardio come back.");
     if(O.st.blocked>=5)tips.push("He's covering up. Go to the legs, or change levels and shoot.");
     if(ms.landed<4)tips.push("You're too passive. The judges want to see you let your hands go.");
