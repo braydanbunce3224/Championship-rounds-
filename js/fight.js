@@ -53,7 +53,7 @@ function lookOf(f,side){const r=seeded(hash(f.id||f.last,'look'));
   const SK=['#f2c9a8','#e3b08a','#c98d62','#ad7048','#8c5636','#6c3f26','#4f2c1b'];
   const HC=['#16110d','#2b1d14','#4a2f1c','#7a5230','#b78a50','#2a2a2a','#5a4a3a'];
   return{skin:pickr(r,SK),hair:pickr(r,HC),hs:Math.floor(r()*5),beard:r()<.35,
-    trunk:side?'#2f63c8':'#cf3a2e',trunk2:side?'#1d3f86':'#8c2219',glove:side?'#1c3570':'#701b15'}}
+    side,trunk:side?'#2f63c8':'#cf3a2e',trunk2:side?'#1d3f86':'#8c2219',glove:side?'#1c3570':'#701b15'}}
 function mkLF(f,side,human){const r=f.r;
   return{f,side,human,name:f.last,x:LV.W/2+(side?15:-15),face:side?-1:1,vx:0,
     head:100,headMax:100,body:100,legs:100,sta:100,

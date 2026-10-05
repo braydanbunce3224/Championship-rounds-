@@ -60,7 +60,10 @@ PO.stag=ov(PO.stance,{H:[1,-27],N:[0,-23],P:[0,-13],Kb:[-3,-6],Kf:[3,-6],Hf:[5,-
 PO.down={H:[-14,-3],N:[-10,-3],P:[0,-3],Eb:[-8,-1],Hb:[-6,0],Ef:[-9,-6],Hf:[-6,-8],Kb:[6,-4],Fb:[12,0],Kf:[5,-7],Ff:[11,-4]};
 PO.dodge=ov(PO.stance,{H:[-2,-27],N:[-2,-23],P:[-1,-14],Hf:[4,-25],Hb:[1,-24]});
 PO.sprawl={H:[6,-13],N:[3,-12],P:[-4,-6],Eb:[3,-8],Hb:[7,-6],Ef:[5,-9],Hf:[9,-7],Kb:[-8,-2],Fb:[-13,0],Kf:[-6,-2],Ff:[-10,0]};
+PO.fall={H:[-4,-17],N:[-3,-14],P:[-1,-8],Eb:[-6,-11],Hb:[-5,-6],Ef:[0,-12],Hf:[2,-8],Kb:[-4,-3],Fb:[-9,0],Kf:[4,-4],Ff:[8,0]};
+PO.rise={H:[3,-20],N:[1,-17],P:[-1,-9],Eb:[1,-12],Hb:[4,-13],Ef:[4,-13],Hf:[7,-15],Kb:[-4,-3],Fb:[-8,0],Kf:[4,-6],Ff:[6,0]};
 PO.win=ov(PO.stance,{H:[1,-30],N:[0,-25],Eb:[-4,-29],Hb:[-3,-35],Ef:[5,-29],Hf:[5,-35]});
+PO.win2=ov(PO.stance,{H:[1,-31],N:[0,-26],P:[0,-15],Eb:[-5,-30],Hb:[-6,-37],Ef:[7,-31],Hf:[9,-38],Kb:[-3,-8],Kf:[3,-8]});
 PO.clinch=ov(PO.stance,{N:[3,-23],H:[5,-27],Ef:[7,-23],Hf:[10,-27],Eb:[5,-21],Hb:[9,-25]});
 PO.kneeX=ov(PO.clinch,{Kf:[7,-15],Ff:[4,-9],P:[1,-14]});PO.cpX=ov(PO.clinch,{Eb:[7,-22],Hb:[11,-24]});
 PO.ref={H:[1,-29],N:[0,-24],P:[0,-14],Eb:[-2,-19],Hb:[-1,-15],Ef:[2,-19],Hf:[3,-15],Kb:[-2,-7],Fb:[-3,0],Kf:[2,-7],Ff:[3,0]};
@@ -116,6 +119,7 @@ function buildBg(kind,ring){const [c,x]=mkCanvas(FVW,FVH),rr=seeded(hash(kind,'b
     for(let i=0;i<FVW;i+=24)prect(x,i,FVY+9,12,2,shade(pal.mat2,-.25))}
   else{const fg=x.createLinearGradient(0,FVY-4,0,FVH);fg.addColorStop(0,shade(pal.mat,.12));fg.addColorStop(1,pal.mat2);x.fillStyle=fg;x.fillRect(0,FVY-4,FVW,FVH-FVY+4);
     if(!reg){x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,FVY+9,FVW,1);for(const [sx,w] of [[18,26],[212,26]]){prect(x,sx,FVY+3,w,4,'rgba(0,0,0,.14)');prect(x,sx+2,FVY+4,w-4,2,pal.acc)}}}
+  for(const [rw,a] of [[.46,.05],[.34,.05],[.22,.06]]){x.fillStyle=`rgba(255,246,220,${a})`;x.beginPath();x.ellipse(FVW/2,FVY+8,FVW*rw,12*rw/.46,0,0,Math.PI*2);x.fill()}
   const logo=kind==='EXH'?'':reg?'PGFC':kind==='RYU'?'RYUJIN':kind;
   if(logo){const sc=3,w=pxW(logo,sc);pxText(x,logo,Math.round(FVW/2-w/2),FVY+2,sc,pal.logo)}
   if(!ring){ // cage: padded rail, chain-link mesh with highlights, posts
@@ -129,16 +133,17 @@ function buildBg(kind,ring){const [c,x]=mkCanvas(FVW,FVH),rr=seeded(hash(kind,'b
     for(const px of [4,FVW-12]){prect(x,px,ct-2,8,FVY-ct+2,'#0f0f13');prect(x,px+1,ct-2,2,FVY-ct+2,'#26262d');prect(x,px,ct+12,8,22,pal.acc);prect(x,px,ct+12,8,2,shade(pal.acc,.3))}
   }else{for(const px of [10,FVW-16]){prect(x,px,FVY-84,6,84,'#1b1b1f');prect(x,px+1,FVY-84,1,84,'#3a3a40');prect(x,px-1,FVY-84,8,14,pal.acc);prect(x,px-1,FVY-84,8,2,shade(pal.acc,.35))}}
   return c}
-function buildCrowd(kind){const reg=kind==='REG',rr=seeded(hash(kind,'crowd')),layers=[0,1,2,3].map(()=>mkCanvas(FVW,FVH));
+function buildCrowd(kind){const reg=kind==='REG',rr=seeded(hash(kind,'crowd')),layers=[0,1,2,3].map(()=>mkCanvas(FVW,FVH)),arms=[0,1,2,3].map(()=>mkCanvas(FVW,FVH));
   const pal=['#4a3a40','#35404e','#55463a','#363636','#5a4646','#33473e','#46405a','#5f4f40','#6a5a50','#3d3530'],skins=['#d9b392','#b98a64','#8f6446','#6b4630','#e6c3a3'];
   const y0=reg?FVY-56:30,y1=reg?FVY-40:FVY-74,rows=Math.max(1,Math.floor((y1-y0)/7));
   for(let r=0;r<rows;r++){const yy=y0+r*7,dim=.55+.45*(r/rows);
     for(let xx=-3;xx<FVW;xx+=5+Math.floor(rr()*3)){if(rr()<(reg?.55:.12))continue;const L=layers[Math.floor(rr()*4)][1],sh=pal[Math.floor(rr()*pal.length)],sk=skins[Math.floor(rr()*skins.length)];
-      const yo=yy+Math.floor(rr()*2);prect(L,xx,yo+4,6,5,shade(sh,-(1-dim)));prect(L,xx+1,yo,4,4,shade(sk,-(1-dim)*.9));
+      const yo=yy+Math.floor(rr()*2),li=layers.findIndex(l=>l[1]===L);prect(L,xx,yo+4,6,5,shade(sh,-(1-dim)));prect(L,xx,yo+4,1,5,shade(sh,-(1-dim)-.2));prect(L,xx+1,yo,4,4,shade(sk,-(1-dim)*.9));prect(L,xx+1,yo,1,4,shade(sk,-(1-dim)*.9-.15));
+      if(rr()<.55){const A=arms[li][1],ac=shade(sk,-(1-dim)*.9),up=rr()<.5;prect(A,xx-1,yo-(up?4:2),1,up?7:5,ac);prect(A,xx+6,yo-(up?4:2),1,up?7:5,ac);prect(A,xx-1,yo-(up?5:3),2,2,ac);prect(A,xx+5,yo-(up?5:3),2,2,ac)}
       if(rr()<.25)prect(L,xx+1,yo,4,1,shade('#2a1d14',-(1-dim)));
       if(rr()<.05){prect(L,xx+4,yo+1,2,3,'#c9e3ff')}
       if(!reg&&rr()<.025){const sc=pick(['#e1ad3a','#c8202c','#3a6fd8','#f1e9dc']);prect(L,xx-1,yo-5,9,5,sc);prect(L,xx+1,yo-4,5,1,'#222')}}}
-  return layers.map(l=>l[0])}
+  const out=layers.map(l=>l[0]);out.arms=arms.map(a=>a[0]);return out}
 function buildVignette(){const [c,x]=mkCanvas(FVW,FVH);const g=x.createRadialGradient(FVW/2,FVH*.55,FVH*.35,FVW/2,FVH*.55,FVW*.72);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.55)');x.fillStyle=g;x.fillRect(0,0,FVW,FVH);return c}
 function drawRopes(x,kind){const cols=kind==='RYU'?['#efe9de','#d02a34','#efe9de']:['#efe9de','#d33a3a','#3a62c0'];
   [FVY-68,FVY-50,FVY-32].forEach((y,i)=>{prect(x,14,y,FVW-28,3,cols[i]);prect(x,14,y,FVW-28,1,shade(cols[i],.35));prect(x,14,y+3,FVW-28,2,'rgba(0,0,0,.35)')})}
@@ -150,13 +155,22 @@ function figure(x,J,ox,fc,lk,o){o=o||{};const bd=o.build||1,fl=o.flash,P=k=>[(ox
   const ref=o.ref,shirt='#17171b',pants='#3b3d44';
   const layers=[[],[],[]];
   const L=(i,f)=>layers[i].push(f);
-  const limb=(i,a,b,w,c)=>L(i,(dx,dy,col)=>pline(x,a[0]+dx,a[1]+dy,b[0]+dx,b[1]+dy,w,col||c));
+  // limbs get a lit edge (toward the lights, up and toward the camera side) and a shaded edge
+  const limb=(i,a,b,w,c,joint)=>L(i,(dx,dy,col)=>{pline(x,a[0]+dx,a[1]+dy,b[0]+dx,b[1]+dy,w,col||c);
+    if(joint)pcirc(x,b[0]+dx,b[1]+dy,Math.max(1,Math.floor(w/2)),col||c);
+    if(col||fl||w<4)return;const vx=b[0]-a[0],vy=b[1]-a[1],l=Math.hypot(vx,vy)||1;let nx=-vy/l,ny=vx/l;if(ny>0||(Math.abs(ny)<.2&&nx>0)){nx=-nx;ny=-ny}
+    const o=w/2-1.2;pline(x,a[0]+nx*o,a[1]+ny*o,b[0]+nx*o,b[1]+ny*o,1,shade(c,.2));pline(x,a[0]-nx*o,a[1]-ny*o,b[0]-nx*o,b[1]-ny*o,1,shade(c,-.22))});
   // back leg + back arm (layer 0, darker)
   const leg=(i,K,Fo,c,cs,front)=>{const p=P('P'),k=P(K),f=P(Fo),m=[p[0]+(k[0]-p[0])*.55,p[1]+(k[1]-p[1])*.55];
-    limb(i,p,m,Math.round(7*bd),ref?pants:(front?tr:trS));limb(i,m,k,Math.round(6*bd),ref?pants:c);limb(i,k,f,Math.round(5*bd),ref?pants:c);
+    limb(i,p,m,Math.round(7*bd),ref?pants:(front?tr:trS));limb(i,m,k,Math.round(6*bd),ref?pants:c,1);limb(i,k,f,Math.round(5*bd),ref?pants:c);
+    if(!ref)L(i,(dx,dy,col)=>{if(col||fl)return;const cv=[k[0]+(f[0]-k[0])*.3,k[1]+(f[1]-k[1])*.3];prect(x,cv[0]-1,cv[1],2,2,shade(c,.12))});
     L(i,(dx,dy,col)=>prect(x,f[0]-(ef>0?2:4)+dx,f[1]-1+dy,6,3,col||(ref?'#111':cs)))};
-  const arm=(i,E,Hd,c,cs)=>{const n=P('N'),s=[n[0],n[1]+3],e=P(E),h=P(Hd);limb(i,s,e,Math.round(5*bd),ref?shirt:c);limb(i,e,h,Math.round(4*bd),c);
-    L(i,(dx,dy,col)=>{if(ref){prect(x,h[0]-2+dx,h[1]-2+dy,4,4,col||c);return}prect(x,h[0]-3+dx,h[1]-3+dy,7,7,col||gl);if(!col){prect(x,h[0]-3,h[1]-3,7,2,glH);const cuff=[e[0]+(h[0]-e[0])*.62,e[1]+(h[1]-e[1])*.62];prect(x,cuff[0]-2,cuff[1]-2,4,4,fl?'#fff':'#ece6da')}})};
+  const arm=(i,E,Hd,c,cs)=>{const n=P('N'),s=[n[0],n[1]+3],e=P(E),h=P(Hd);limb(i,s,e,Math.round(5*bd),ref?shirt:c,1);limb(i,e,h,Math.round(4*bd),c);
+    L(i,(dx,dy,col)=>{if(ref){prect(x,h[0]-2+dx,h[1]-2+dy,4,4,col||c);return}
+      const cuff=[e[0]+(h[0]-e[0])*.62,e[1]+(h[1]-e[1])*.62];
+      if(!col)pline(x,cuff[0],cuff[1],h[0],h[1],3,fl?'#fff':'#ece6da');
+      pcirc(x,h[0]+dx,h[1]+dy,3,col||gl);prect(x,h[0]+(ef>0?1:-3)+dx,h[1]-2+dy,2,4,col||gl);
+      if(!col&&!fl){prect(x,h[0]-2,h[1]-3,3,1,glH);prect(x,h[0]-3,h[1]-2,1,2,glH);prect(x,h[0]-1,h[1]+2,4,1,shade(lk.glove,-.35));prect(x,h[0]+(ef>0?-3:1),h[1]-1,2,1,shade(lk.glove,-.25))}})};
   leg(0,'Kb','Fb',skS,skS,false);arm(0,'Eb','Hb',skS,skS);
   // torso, shorts, front leg, neck, head (layer 1)
   const n=P('N'),p=P('P'),ax=[p[0]-n[0],p[1]-n[1]],al=Math.hypot(ax[0],ax[1])||1,nv=[-ax[1]/al,ax[0]/al],front=Math.sign(nv[0]*fc)||1;
@@ -168,18 +182,23 @@ function figure(x,J,ox,fc,lk,o){o=o||{};const bd=o.build||1,fl=o.flash,P=k=>[(ox
       ppoly(x,bq,skS);const at=t=>[n[0]+ax[0]*t,n[1]+ax[1]*t];
       const c1=at(.32);pline(x,c1[0]+nv[0]*front*1,c1[1],c1[0]+nv[0]*front*5,c1[1]+1,1,skS);
       for(const t of [.55,.7,.84]){const q=at(t);prect(x,q[0]+nv[0]*front*2-1,q[1],3,1,shade(lk.skin,-.12))}
-      const hl=at(.2);prect(x,hl[0]+nv[0]*front*(sw-3),hl[1],2,2,skH)}
+      const hl=at(.2);prect(x,hl[0]+nv[0]*front*(sw-3),hl[1],2,2,skH);
+      // rim light down the front edge, deltoid on the lead shoulder, lat shadow
+      const fe=front>0?[quad[0],quad[1]]:[quad[3],quad[2]];pline(x,fe[0][0]-nv[0]*front*1.5,fe[0][1]+1,fe[1][0]-nv[0]*front*1.5,fe[1][1]-2,1,skH);
+      const dl=[sh[0]+nv[0]*front*(sw-2),sh[1]+nv[1]*front*(sw-2)+1];pcirc(x,dl[0],dl[1],3,sk);prect(x,dl[0]-1,dl[1]-2,2,1,skH);
+      const lt=at(.45);prect(x,lt[0]-nv[0]*front*(sw-4),lt[1],1,4,skS)}
     if(!col&&ref){const q=[n[0]+ax[0]*.15,n[1]+ax[1]*.15];prect(x,q[0]-1,q[1],2,2,'#ddd')}});
   // shorts over hips
   L(1,(dx,dy,col)=>{if(ref)return;const kf=P('Kf'),kb=P('Kb'),m1=[p[0]+(kf[0]-p[0])*.5,p[1]+(kf[1]-p[1])*.5],m2=[p[0]+(kb[0]-p[0])*.5,p[1]+(kb[1]-p[1])*.5];
     pline(x,p[0]+dx,p[1]+dy,m1[0]+dx,m1[1]+dy,Math.round(9*bd),col||tr);pline(x,p[0]+dx,p[1]+dy,m2[0]+dx,m2[1]+dy,Math.round(8*bd),col||trS);
-    if(!col){const w=Math.round(10*bd);prect(x,p[0]-w/2,p[1]-2,w,3,shade(lk.trunk,-.35));pline(x,p[0],p[1]+1,m1[0],m1[1],1,shade(lk.trunk,.4))}});
+    if(!col){const w=Math.round(10*bd);prect(x,p[0]-w/2,p[1]-2,w,3,shade(lk.trunk,-.35));prect(x,p[0]-w/2,p[1]-2,w,1,shade(lk.trunk,-.1));pline(x,p[0],p[1]+1,m1[0],m1[1],1,shade(lk.trunk,.4));
+      if(!fl){const ex=[m1[0]+(ef>0?2:-2),m1[1]];pline(x,p[0]+(ef>0?3:-3),p[1],ex[0],ex[1],1,lk.side?'#9cc0ff':'#ffd0c4')}}});
   const h=P('H'),hr=6;
   L(1,(dx,dy,col)=>{pline(x,n[0]+dx,n[1]+2+dy,h[0]+dx,h[1]+3+dy,5,col||skS);pcirc(x,h[0]+dx,h[1]+dy,hr,col||sk);
     if(!o.lying)prect(x,h[0]+(ef>0?0:-5)+dx,h[1]+1+dy,6,5,col||sk)});
   L(1,(dx,dy,col)=>{if(col)return;const hx=Math.round(h[0]),hy=Math.round(h[1]);
     if(o.lying){prect(x,hx-1,hy-4,2,2,'#1a1210');if(lk.hs)prect(x,hx-ef*5-1,hy-4,3,8,lk.hair);return}
-    prect(x,hx-ef*4-1,hy-1,2,3,skS);prect(x,hx-ef*2-2,hy+5,5,1,skS);
+    prect(x,hx-ef*4-1,hy-1,2,3,skS);prect(x,hx-ef*2-2,hy+5,5,1,skS);prect(x,hx-ef*1-1,hy,2,3,shade(lk.skin,-.3));prect(x,hx+(ef>0?-4:2),hy-4,2,1,skH);
     const hair=lk.hair,hs=lk.hs;
     const cap=rows=>{for(let dy2=-hr;dy2<-hr+rows;dy2++){const dxw=Math.floor(Math.sqrt(Math.max(0,hr*hr-dy2*dy2))+.35);const x0=hx-dxw,x1=hx+dxw;prect(x,ef>0?x0:x0+1,hy+dy2,x1-x0,1,hair)}};
     if(hs===1){cap(4);prect(x,hx-ef*5-(ef>0?1:0),hy-3,2,4,hair)}
@@ -312,12 +331,13 @@ class LiveView{
   onEv(e){const f=this.f,ff=this.ff;if(ff&&e.type!=='banner')return;
     switch(e.type){
       case'hit':{const p=this.hitPos(e),big=e.big;
-        this.parts.push({k:'star',x:p[0],y:p[1],l:big?.14:.09,m:big?.14:.09,s:big?7:4});if(big)this.parts.push({k:'ring',x:p[0],y:p[1],l:.18,m:.18});
+        this.parts.push({k:'burst',x:p[0],y:p[1],l:big?.2:.12,m:big?.2:.12,s:big?1:.6,d:-(e.F.face||1)});if(big)this.parts.push({k:'ring',x:p[0],y:p[1],l:.18,m:.18});
+        if(big)this.parts.push({k:'lines',x:p[0],y:p[1],l:.12,m:.12,d:-(e.F.face||1)});
         for(let i=0;i<(big?10:5);i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*130-e.F.face*40,vy:(Math.random()-.75)*110,l:.2+Math.random()*.2,c:Math.random()<.5?'#fff':'#ffe58a',s:Math.random()<.4?2:1});
         if(big||Math.random()<.4)for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*80-e.F.face*30,vy:-Math.random()*70,l:.5,c:'#cfe8ff',s:2,g:1});
         if(e.blood)for(let i=0;i<6;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*90,vy:-Math.random()*60,l:1,c:'#8f1717',s:2,g:1,dec:1});
         if(big){this.stop=Math.max(this.stop,e.dmg>9?.1:.065);this.hype=Math.min(1,this.hype+.35)}
-        e.F.flashT=.07;SFX.play('hit',big);if(big&&e.dmg>8)SFX.play('crowd');
+        e.F.flashT=.07;e.F.snap=.18;e.F.snapBig=big;e.F.snapT=e.tgt||'head';SFX.play('hit',big);if(big&&e.dmg>8)SFX.play('crowd');
         if(f.human&&(e.F===f.human||e.A===f.human))try{navigator.vibrate&&navigator.vibrate(e.F===f.human?(big?30:12):8)}catch(_){}break}
       case'block':{const p=this.hitPos(e);for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*70-e.F.face*30,vy:(Math.random()-.6)*60,l:.16,c:'#a9b3bd',s:1});this.parts.push({k:'ring',x:p[0],y:p[1],l:.1,m:.1,c:'#a9b3bd'});SFX.play('block');break}
       case'whoosh':SFX.play('whoosh');break;
@@ -353,7 +373,10 @@ class LiveView{
     let sx=0,sy=0;if(f.shake){sx=Math.round((Math.random()-.5)*f.shake*FVS);sy=Math.round((Math.random()-.5)*f.shake*FVS*.6)}
     x.setTransform(1,0,0,1,0,0);x.fillStyle='#000';x.fillRect(0,0,FVW,FVH);x.setTransform(1,0,0,1,sx,sy);
     x.drawImage(this.bg,0,0);
-    const T=f.T,amp=this.hype>.15?2:0;this.crowd.forEach((c,i)=>{const o=amp?Math.round(Math.abs(Math.sin(T*(8+i*1.3)+i*1.7))*-amp):(Math.sin(T*1.3+i*2)>.97?-1:0);x.drawImage(c,0,o)});
+    this.vt=(this.vt||0)+dt;const T=this.vt,amp=this.hype>.15?2:0;this.crowd.forEach((c,i)=>{const o=amp?Math.round(Math.abs(Math.sin(T*(8+i*1.3)+i*1.7))*-amp):(Math.sin(T*1.3+i*2)>.97?-1:0);
+      if(this.hype>.4&&this.crowd.arms)x.drawImage(this.crowd.arms[i],0,o-(Math.sin(T*(10+i)+i)>0?1:0));x.drawImage(c,0,o)});
+    // sweeping spotlights when the place is rocking
+    if(this.hype>.55&&this.kind!=='REG'){for(let i=0;i<2;i++){const cx=FVW/2+Math.sin(T*1.3+i*Math.PI)*FVW*.38;x.globalAlpha=.07*this.hype;x.fillStyle='#fff3cf';x.beginPath();x.moveTo(cx-4,20);x.lineTo(cx+4,20);x.lineTo(cx+34,FVY);x.lineTo(cx-34,FVY);x.fill()}x.globalAlpha=1}
     if(this.kind!=='REG'&&Math.random()<.08+this.hype*.5){const fx=Math.floor(Math.random()*FVW),fy=30+Math.floor(Math.random()*(FVY-110));prect(x,fx-1,fy,3,1,'#fff');prect(x,fx,fy-1,1,3,'#fff')}
     for(const d of this.decals)prect(x,d[0],d[1],d[2],1,'#7a1414');
     const shadowAt=(ux,w)=>{x.fillStyle='rgba(0,0,0,.35)';x.fillRect(Math.round(ux*FVS-w),FVY-1,w*2,3);x.fillRect(Math.round(ux*FVS-w+3),FVY+2,w*2-6,1)};
@@ -363,6 +386,11 @@ class LiveView{
     else{for(const F of f.F)shadowAt(F.x,F.down>0?20:11);const order=[...f.F].sort((a,b)=>(a.act?1:0)-(b.act?1:0));for(const F of order)this.drawStand(x,F,dt)}
     if(this.o.ring)drawRopes(x,this.kind);
     for(const p of this.parts){
+      if(p.k==='burst'){const t=1-p.l/p.m,S=p.s;
+        if(t<.34){const r=Math.round(7*S);prect(x,p.x-r,p.y-1,r*2+1,3,'#fff');prect(x,p.x-1,p.y-r,3,r*2+1,'#fff');for(const [a,b] of [[1,1],[1,-1],[-1,1],[-1,-1]])pline(x,p.x+a*2,p.y+b*2,p.x+a*r*.7,p.y+b*r*.7,2,'#ffe066');pcirc(x,p.x,p.y,Math.round(3*S),'#fff6c8')}
+        else if(t<.67){const r=Math.round(9*S);for(let i=0;i<10;i++){const a=i/10*Math.PI*2;prect(x,p.x+Math.cos(a)*r-1,p.y+Math.sin(a)*r*.8-1,3,3,i%2?'#ffe066':'#fff')}pcirc(x,p.x,p.y,Math.round(2*S),'#ffd04a')}
+        else{const r=Math.round(12*S);for(let i=0;i<8;i++){const a=i/8*Math.PI*2+.4;prect(x,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r*.8,2,2,'#ffb347')}}continue}
+      if(p.k==='lines'){const t=1-p.l/p.m;for(const dy of [-6,0,6]){const len=10+Math.abs(dy)*-0.5,x0=p.x-p.d*(14+t*10);x.globalAlpha=1-t;prect(x,Math.min(x0,x0-p.d*len),p.y+dy,len,1,'#fff');x.globalAlpha=1}continue}
       if(p.k==='star'){const t=p.l/p.m,s=Math.max(1,Math.round(p.s*t));prect(x,p.x-s,p.y-1,s*2+1,3,'#fff');prect(x,p.x-1,p.y-s,3,s*2+1,'#fff');prect(x,p.x-1,p.y-1,3,3,'#ffe066');continue}
       if(p.k==='ring'){const t=1-p.l/p.m,rad=4+t*12;x.fillStyle=p.c||'rgba(255,255,255,.8)';for(let i=0;i<16;i++){const a=i/16*Math.PI*2;x.fillRect(Math.round(p.x+Math.cos(a)*rad),Math.round(p.y+Math.sin(a)*rad*.8),2,2)}continue}
       x.globalAlpha=p.a?Math.min(1,p.l*2):1;prect(x,p.x,p.y,p.s,p.s,p.c);x.globalAlpha=1}
@@ -374,24 +402,33 @@ class LiveView{
     if(this.zoom>1.005&&D){const z=this.zoom,cx=clamp(D.x*FVS,FVW/(2*z),FVW-FVW/(2*z)),cy=clamp((FVY-20),FVH/(2*z),FVH-FVH/(2*z));c.drawImage(this.buf,cx-FVW/(2*z),cy-FVH/(2*z),FVW/z,FVH/z,0,0,FVW,FVH)}
     else c.drawImage(this.buf,0,0)}
   poseStand(F){const f=this.f;
-    if(F.win&&f.phase==='end'&&f.pt>.9)return PO.win;
-    if(F.down>0)return PO.down;
+    if(F.win&&f.phase==='end'&&f.pt>.9){const k=Math.sin(f.pt*5.5);return mixP(PO.win,PO.win2,k*.5+.5)}
+    if(F.down>0){const t=F.vFall||0;if(t<.16)return mixP(F.hurt>0||F.stag>0?PO.stag:PO.hurt,PO.fall,ease(t/.16));if(t<.38)return mixP(PO.fall,PO.down,ease((t-.16)/.22));return PO.down}
+    if(F.vRise>0)return mixP(PO.rise,PO.stance,ease(1-F.vRise/.45));
     if(f.pos==='clinch'){if(F.act&&PCH[F.act.k])return this.actPose(F);if(f.ct)return mixP(PO.clinch,PO.stag,.3+Math.sin(f.T*30)*.15);return PO.clinch}
     if(F.sprawl&&F.o.act&&F.o.act.k==='shoot')return PO.sprawl;
     if(F.dodge>0)return PO.dodge;
     if(F.stuff>0)return PO.stag;
-    if(F.act&&PCH[F.act.k])return this.actPose(F);
-    if(F.hurt>0)return mixP(PO.stance,PO.hurt,Math.min(1,F.hurt*7));
+    if(F.act&&PCH[F.act.k])return this.actPoseS(F);
+    if(F.hurt>0)return this.snap(F,mixP(PO.stance,PO.hurt,Math.min(1,F.hurt*7)));
     if(F.block)return PO.block;
     let p=F.stag>0?mixP(PO.stance,PO.stag,.75):PO.stance;
     if(Math.abs(F.vx)>2){const s=Math.sin(F.walkT*15);p=ov(p,{Kb:[p.Kb[0]+s*1.5,p.Kb[1]],Fb:[p.Fb[0]+s*2.5,p.Fb[1]-Math.max(0,s)*1.5],Kf:[p.Kf[0]-s*1.5,p.Kf[1]],Ff:[p.Ff[0]-s*2.5,p.Ff[1]-Math.max(0,-s)*1.5]})}
-    const b=Math.sin(f.T*5+F.side*2)*.5,q={};for(const k of PJ)q[k]=k[0]==='K'||k[0]==='F'?p[k]:[p[k][0],p[k][1]+b*(k==='P'?.3:1)];return q}
+    if(Math.abs(F.vx)>2){const s=Math.sin(F.walkT*15);p=ov(p,{Hf:[p.Hf[0]-s*.8,p.Hf[1]+Math.abs(s)*.6],Hb:[p.Hb[0]+s*.8,p.Hb[1]+Math.abs(s)*.6]})}
+    const b=Math.sin(f.T*5+F.side*2)*.5,q={};for(const k of PJ)q[k]=k[0]==='K'||k[0]==='F'?p[k]:[p[k][0],p[k][1]+b*(k==='P'?.3:1)];return this.snap(F,q)}
+  // head snaps back on clean shots, body folds on body shots
+  snap(F,q){if(!(F.snap>0))return q;const k=F.snap/.18*(F.snapBig?1.6:1),o={};for(const j of PJ)o[j]=q[j];
+    if(F.snapT==='body'){o.N=[q.N[0]+1.5*k,q.N[1]+1.2*k];o.H=[q.H[0]+2*k,q.H[1]+2*k];o.P=[q.P[0]-.8*k,q.P[1]]}
+    else{o.H=[q.H[0]-2.6*k,q.H[1]-.6*k];o.N=[q.N[0]-1.1*k,q.N[1]]}return o}
+  actPoseS(F){return this.snap(F,this.actPose(F))}
   actPose(F){const a=F.act,c=PCH[a.k],C=PO[c[0]],X=PO[c[1]],St=this.f.pos==='clinch'?PO.clinch:PO.stance;
     if(a.ph==='w')return mixP(St,C,ease(a.t/a.dw));if(a.ph==='a')return mixP(C,X,Math.min(1,a.t/Math.min(a.da,.06)));return mixP(X,St,ease(a.t/a.dr))}
-  drawStand(x,F,dt){const f=this.f,J=this.poseStand(F);if(F.flashT>0)F.flashT-=dt;
+  drawStand(x,F,dt){const f=this.f;
+    if(F.down>0)F.vFall=(F.vFall||0)+dt;else{if(F.vFall>0&&!F.lost)F.vRise=.45;F.vFall=0}if(F.vRise>0)F.vRise-=dt;if(F.snap>0)F.snap-=dt;
+    const J=this.poseStand(F);if(F.flashT>0)F.flashT-=dt;
     const a=F.act;if(a&&a.m.pow&&TRAIL[a.k]&&(a.ph==='a'||(a.ph==='r'&&a.t<.05))){const c=PCH[a.k],j=TRAIL[a.k],C=PO[c[0]][j],X=PO[c[1]][j];
       for(let i=1;i<=4;i++){const t=1-i*.22,px=(F.x+F.face*(C[0]+(X[0]-C[0])*t))*FVS,py=(LV.FLOOR+C[1]+(X[1]-C[1])*t)*FVS;x.globalAlpha=.42-i*.08;prect(x,px-3,py-3,7,7,'#fff6d0')}x.globalAlpha=1}
-    figure(x,J,F.x,F.face,F.look,{lying:F.down>0,build:F.build,flash:F.flashT>0,hurt:F.hurt>0||F.stag>0,ko:F.down>0&&(F.lost||F.head<20),dmg:1-F.headMax/100+(F.head<35?.25:0)});
+    figure(x,J,F.x,F.face,F.look,{build:F.build,flash:F.flashT>0,hurt:F.hurt>0||F.stag>0,lying:F.down>0&&(F.vFall||0)>.3,ko:F.down>0&&(F.lost||F.head<20),dmg:1-F.headMax/100+(F.head<35?.25:0)});
     if(F.fire>0&&F.down<=0){const t=f.T;for(let i=0;i<6;i++){const ph=(t*1.6+i/6)%1,jx=['Hf','Hb','H','P','Ef','Eb'][i],j=J[jx];
       x.globalAlpha=1-ph;prect(x,(F.x+F.face*j[0])*FVS+Math.sin(t*9+i*2)*3,(LV.FLOOR+j[1])*FVS-ph*14,2,2,ph<.4?'#ffe066':'#ff7a2b')}x.globalAlpha=1}
     if(F.stag>0&&F.down<=0){const h=J.H,t=f.T;for(let i=0;i<3;i++){const an=t*6+i*2.1;prect(x,(F.x+F.face*h[0]+Math.cos(an)*6)*FVS,(LV.FLOOR+h[1]-8+Math.sin(an)*1.5)*FVS,2,2,i?'#ffe066':'#fff')}}}
