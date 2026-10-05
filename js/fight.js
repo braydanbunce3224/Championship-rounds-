@@ -15,6 +15,12 @@ const LMV={
   lkick:{w:.20,a:.08,r:.30,sta:7,rng:20,dmg:6.5,tgt:'legs',pts:2,nm:'leg kick',kick:1},
   hkick:{w:.34,a:.08,r:.44,sta:13,rng:21,dmg:17,tgt:'head',pts:4,pow:1,nm:'head kick',kick:1},
   shoot:{w:.13,a:.30,r:.42,sta:14,rng:30},
+  upper:{w:.15,a:.06,r:.25,sta:7,rng:12.5,dmg:8.5,tgt:'head',pts:2,pow:1,nm:'uppercut'},
+  body:{w:.15,a:.07,r:.25,sta:6,rng:14,dmg:7.5,tgt:'body',pts:2,pow:1,nm:'body hook'},
+  superman:{w:.26,a:.08,r:.36,sta:12,rng:21,dmg:11,tgt:'head',pts:3,pow:1,nm:'superman punch',lunge:62,risk:1},
+  bkick:{w:.22,a:.08,r:.32,sta:9,rng:20,dmg:8.5,tgt:'body',pts:2,pow:1,nm:'body kick',kick:1},
+  teep:{w:.17,a:.07,r:.26,sta:6,rng:20,dmg:4,tgt:'body',pts:1,nm:'teep',kick:1,push:46},
+  spin:{w:.36,a:.08,r:.46,sta:14,rng:19,dmg:13,tgt:'body',pts:4,pow:1,nm:'spinning back kick',kick:1,risk:1},
   soccer:{w:.20,a:.07,r:.30,sta:8,rng:17,dmg:11,tgt:'head',pts:3,pow:1,nm:'soccer kick',kick:1},
   cpunch:{w:.08,a:.05,r:.16,sta:2.5,dmg:3,tgt:'head',pts:1,nm:'short punches'},
   knee:{w:.16,a:.06,r:.26,sta:6,dmg:7,tgt:'body',pts:2,pow:1,nm:'knee'},
@@ -22,13 +28,15 @@ const LMV={
   hgnp:{w:.22,a:.07,r:.34,sta:6,dmg:5.6,tgt:'head',pts:2,pow:1,nm:'elbows'},
   bstrike:{w:.10,a:.05,r:.22,sta:2.5,dmg:2.2,tgt:'head',pts:1,nm:'strikes from the bottom'}
 };
+const LSTRIKE=new Set(['jab','cross','hook','over','lkick','hkick','upper','body','superman','bkick','teep','spin']);
+const LCHAIN=new Set(['jab','cross','hook','upper','body','lkick','bkick','teep']);
 const LSTYLE={
-  Striker:{w:{jab:.34,cross:.24,hook:.14,over:.05,lkick:.1,hkick:.05,shoot:.04,clinch:.04},want:16,ag:.62},
-  Kickboxer:{w:{jab:.24,cross:.14,hook:.1,over:.02,lkick:.26,hkick:.17,shoot:.03,clinch:.04},want:18,ag:.6},
-  Brawler:{w:{jab:.1,cross:.26,hook:.24,over:.24,lkick:.05,hkick:.03,shoot:.04,clinch:.04},want:13,ag:.72},
-  Wrestler:{w:{jab:.28,cross:.14,hook:.08,over:.03,lkick:.05,hkick:0,shoot:.21,clinch:.1},want:14,ag:.55},
-  BJJ:{w:{jab:.3,cross:.14,hook:.08,over:.02,lkick:.08,hkick:.02,shoot:.18,clinch:.08},want:15,ag:.5},
-  'All-rounder':{w:{jab:.3,cross:.2,hook:.12,over:.05,lkick:.1,hkick:.05,shoot:.08,clinch:.05},want:16,ag:.58}
+  Striker:{w:{jab:.34,cross:.24,hook:.14,over:.05,lkick:.1,hkick:.05,upper:.06,body:0.056,superman:.03,bkick:0.028,teep:0.02,spin:.02,shoot:.04,clinch:.04},want:16,ag:.62,cmb:.55},
+  Kickboxer:{w:{jab:.24,cross:.14,hook:.1,over:.02,lkick:.26,hkick:.17,upper:.04,body:0.04,superman:.02,bkick:0.07,teep:0.04,spin:.05,shoot:.03,clinch:.04},want:18,ag:.6,cmb:.5},
+  Brawler:{w:{jab:.1,cross:.26,hook:.24,over:.24,lkick:.05,hkick:.03,upper:.1,body:0.064,superman:.05,bkick:0.014,teep:0.005,spin:.01,shoot:.04,clinch:.04},want:13,ag:.72,cmb:.6},
+  Wrestler:{w:{jab:.28,cross:.14,hook:.08,over:.03,lkick:.05,hkick:0,upper:.05,body:0.04,superman:.01,bkick:0.014,teep:0.005,spin:0,shoot:.21,clinch:.1},want:14,ag:.55,cmb:.3},
+  BJJ:{w:{jab:.3,cross:.14,hook:.08,over:.02,lkick:.08,hkick:.02,upper:.03,body:0.032,superman:.01,bkick:0.028,teep:0.02,spin:.01,shoot:.18,clinch:.08},want:15,ag:.5,cmb:.3},
+  'All-rounder':{w:{jab:.3,cross:.2,hook:.12,over:.05,lkick:.1,hkick:.05,upper:.05,body:0.048,superman:.02,bkick:0.035,teep:0.02,spin:.02,shoot:.08,clinch:.05},want:16,ag:.58,cmb:.45}
 };
 const LDIFF={
   easy:{react:.45,block:.25,ag:.75,rate:.68,dmg:.82,sprawl:.32,think:.34,win:.55},
@@ -50,9 +58,9 @@ function mkLF(f,side,human){const r=f.r;
   return{f,side,human,name:f.last,x:LV.W/2+(side?15:-15),face:side?-1:1,vx:0,
     head:100,headMax:100,body:100,legs:100,sta:100,
     act:null,queue:null,qT:0,block:false,hurt:0,stag:0,down:0,inv:0,stuff:0,dodge:0,sprawl:false,
-    kdR:0,legKD:0,unans:0,blockT0:-9,open:0,shootCD:0,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
+    kdR:0,legKD:0,unans:0,blockT0:-9,open:0,shootCD:0,dash:0,mo:0,fire:0,chain:0,chainT:9,kb:0,landT:-9,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
     spd:1.12-(r.str-50)/250,mv:24*(.85+r.car/400+(r.str-50)/500),
-    ai:{t:.4+Math.random()*.3,dir:0,blockT:0,react:0,seen:null},
+    ai:{t:.4+Math.random()*.3,dir:0,blockT:0,react:0,seen:null,combo:0},
     st:{thrown:0,landed:0,kd:0,td:0,tda:0,sub:0,ctrl:0,head:0,body:0,legs:0,blocked:0},
     look:lookOf(f,side)}}
 
@@ -100,12 +108,12 @@ class LiveFight{
   }
   updF(F,dt){
     F.lastAtkT+=dt;F.hitT+=dt;
-    if(F.inv>0)F.inv-=dt;if(F.hurt>0)F.hurt-=dt;if(F.stag>0)F.stag-=dt;if(F.stuff>0)F.stuff-=dt;if(F.dodge>0)F.dodge-=dt;if(F.open>0)F.open-=dt;if(F.scrCD>0)F.scrCD-=dt;if(F.shootCD>0)F.shootCD-=dt;
+    if(F.inv>0)F.inv-=dt;if(F.hurt>0)F.hurt-=dt;if(F.stag>0)F.stag-=dt*(F.block?1.7:1);if(F.stuff>0)F.stuff-=dt;if(F.dodge>0)F.dodge-=dt;if(F.open>0)F.open-=dt;if(F.dash>0)F.dash-=dt;F.chainT+=dt;if(F.fire>0){F.fire-=dt;if(F.fire<=0)this.say(`${F.name} cools off.`)}if(F.scrCD>0)F.scrCD-=dt;if(F.shootCD>0)F.shootCD-=dt;
     if(F.down>0){F.down-=dt;if(F.down<=0&&this.pos==='stand'){F.head=Math.min(F.headMax,F.head+10);F.inv=.5;F.stag=Math.max(F.stag,.8);this.say(`${F.name} beats the count and gets up.`)}}
     const moving=Math.abs(F.vx)>2,busy=!!F.act;
-    const reg=13*(.55+F.f.r.car/150)*(.45+.55*F.body/100)*(F.block?.55:1)*(moving?.75:1)*(busy?.3:1)*(this.pos==='ground'?.8:1)*(this.ct?.2:1);
+    const reg=13*(.55+F.f.r.car/150)*(.7+.3*F.body/100)*(F.block?.55:1)*(moving?.75:1)*(busy?.3:1)*(this.pos==='ground'?.8:1)*(this.ct?.2:1);
     F.sta=clamp(F.sta+reg*dt,0,100);
-    if(F.hitT>2.2&&F.down<=0)F.head=Math.min(F.headMax,F.head+dt*1.7);
+    if(F.hitT>2.2&&F.down<=0){F.head=Math.min(F.headMax,F.head+dt*1.7);F.body=Math.min(100,F.body+dt*.45)}
     if(F.act)this.stepAct(F,dt);
     if(F.queue){F.qT-=dt;if(F.qT<=0)F.queue=null;else if(this.canAct(F)){const k=F.queue;F.queue=null;this.doAct(F,k)}}
     if(moving)F.walkT+=dt;
@@ -113,6 +121,9 @@ class LiveFight{
 
   /* ---------------- actions ---------------- */
   doAct(F,k){
+    const a0=F.act;
+    if(this.pos==='stand'&&a0&&a0.ph==='r'&&LCHAIN.has(a0.k)&&a0.t>.03&&F.down<=0&&F.hurt<=0&&F.stuff<=0&&!this.ct&&this.phase==='fight'&&F.o.down<=0){
+      const mv=this.keyMove(k,Math.abs(F.x-F.o.x),F);if(mv&&LSTRIKE.has(mv)){F.act=null;return this.startAct(F,mv,true)}}
     if(!this.canAct(F)){if(!this.ct&&this.phase==='fight'){F.queue=k;F.qT=.24}return}
     const O=F.o,gap=Math.abs(F.x-O.x);
     if(this.pos==='stand'){
@@ -127,7 +138,13 @@ class LiveFight{
         if(k==='K'||k==='Kc'){this.fhl=null;return this.startAct(F,'knee')}}
       if(k==='S'&&O.act&&O.act.m.kick&&O.act.ph!=='r'&&gap<=O.act.m.rng+3)return this.catchKick(F,O);
       if(k==='J')return this.startAct(F,'jab');
-      if(k==='P'){const m=F.lastAtk==='jab'&&F.lastAtkT<.7?'cross':F.lastAtk==='cross'&&F.lastAtkT<.8?'hook':(F.combo++%2?'hook':'cross');return this.startAct(F,m)}
+      if(k==='P'){const close=gap<12.5,m=F.lastAtk==='jab'&&F.lastAtkT<.7?'cross':F.lastAtk==='cross'&&F.lastAtkT<.8?(close?'upper':'hook'):F.lastAtk==='hook'&&F.lastAtkT<.8&&close?'upper':close&&F.combo%3===2?(F.combo++,'upper'):(F.combo++%2?'hook':'cross');return this.startAct(F,m)}
+      if(k==='U')return this.startAct(F,'upper');
+      if(k==='Pb')return this.startAct(F,'body');
+      if(k==='Pfc')return this.startAct(F,'superman');
+      if(k==='Kf')return this.startAct(F,'bkick');
+      if(k==='Kb')return this.startAct(F,'teep');
+      if(k==='Kfc')return this.startAct(F,'spin');
       if(k==='Pc')return this.startAct(F,'over');
       if(k==='K')return this.startAct(F,'lkick');
       if(k==='Kc')return this.startAct(F,'hkick');
@@ -151,16 +168,18 @@ class LiveFight{
       }
     }
   }
-  startAct(F,k){const m=LMV[k];
+  keyMove(k,gap,F){return{J:'jab',P:F.lastAtk==='jab'&&F.lastAtkT<.9?'cross':F.lastAtk==='cross'&&F.lastAtkT<.9?(gap<12.5?'upper':'hook'):'cross',Pc:'over',K:'lkick',Kc:'hkick',U:'upper',Pb:'body',Pfc:'superman',Kf:'bkick',Kb:'teep',Kfc:'spin'}[k]||(LMV[k]?k:null)}
+  startAct(F,k,chained){const m=LMV[k];
     if(F.sta<m.sta*.6){if(F.human)this.flash('Too tired');return}
-    const s=F.spd*(F.sta<25?1.25:1)*(F.stag>0?1.3:1)*(m.kick?1+(100-F.legs)/250:1);
-    F.act={k,m,ph:'w',t:0,dw:m.w*s,da:k==='shoot'?m.a:m.a*s,dr:m.r*s,done:false};
-    F.sta-=m.sta;F.block=false;if(m.dmg)F.st.thrown++;
+    const s=F.spd*(F.sta<25?1.25:1)*(F.stag>0?1.3:1)*(m.kick?1+(100-F.legs)/250:1)*(F.fire>0?.86:1);
+    F.act={k,m,ph:'w',t:0,dw:m.w*s*(chained?.62:1),da:k==='shoot'?m.a:m.a*s,dr:m.r*s,done:false,ch:!!chained};
+    F.sta-=m.sta*(F.fire>0?.75:1);F.block=false;if(m.dmg)F.st.thrown++;
     F.lastAtk=k;F.lastAtkT=0;
     if(k==='shoot'){F.st.tda++;this.onShoot(F)}
   }
   stepAct(F,dt){const a=F.act;a.t+=dt;
-    if(a.ph==='w'){if(a.t>=a.dw){a.ph='a';a.t=0;if(a.k==='shoot')this.emit('whoosh',{x:F.x});else this.strike(F,a.m,a.k)}}
+    if(a.ph==='r'&&F.queue&&a.t>.03&&this.pos==='stand'&&LCHAIN.has(a.k)){const k=F.queue;F.queue=null;this.doAct(F,k);if(F.act!==a)return}
+    if(a.ph==='w'){if(a.m.lunge&&this.pos==='stand')F.vx=F.face*a.m.lunge;if(a.t>=a.dw){a.ph='a';a.t=0;if(a.k==='shoot')this.emit('whoosh',{x:F.x});else this.strike(F,a.m,a.k)}}
     else if(a.ph==='a'){
       if(a.k==='shoot'&&!a.done){F.vx=F.face*84*(F.sta<20?.75:1);if(Math.abs(F.x-F.o.x)<=LV.MINGAP+1.5){a.done=true;F.vx=0;this.takedown(F,F.o);return}}
       if(F.act&&a.t>=a.da){a.ph='r';a.t=0;if(a.k==='shoot'&&!a.done){F.vx=0;F.stuff=.3;F.o.sprawl=false;this.sprawlW=null;this.say(`${F.name} shoots from too far out.`)}}}
@@ -184,7 +203,7 @@ class LiveFight{
         const reach=m.rng*(1+(A.f.r.str-60)/700);if(gap>reach)return this.whiff(A);
         if(D.inv>0){this.say(`${D.name} slips it.`);this.emit('whoosh',{x:D.x});return}}
     }
-    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.8:1);
+    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.93:1);
     if(!A.human&&D.human)dmg*=this.diff.dmg;
     const shooting=this.pos==='stand'&&D.act&&D.act.k==='shoot'&&D.act.ph!=='r'&&!D.act.done;
     if(shooting&&m.pow){ // timed a power shot or knee into a level change
@@ -195,47 +214,65 @@ class LiveFight{
     if(counter)dmg*=D.open>0&&!(D.act&&D.act.ph==='w')?1.18:1.3;
     // parry: guard raised just before the strike lands
     if(this.pos==='stand'&&D.block&&!D.act&&D.down<=0&&k!=='soccer'&&m.tgt!=='legs'&&this.T-D.blockT0<.22){
-      D.st.blocked++;this.idle=0;A.open=.6;A.sta=Math.max(0,A.sta-2);this.pts(D,1);
+      D.st.blocked++;this.idle=0;A.open=.6;this.momentum(D,9);A.sta=Math.max(0,A.sta-2);this.pts(D,1);
       this.emit('block',{x:D.x,y:-25,F:D});this.say(`${D.name} parries it and ${A.name} is open!`);if(D.human)this.flash('Parry! Counter now');return}
     if(this.pos==='ground'&&this.g.top===A)dmg*=GMULT[this.g.pos];
+    if(A.fire>0)dmg*=1.18;
+    if(A.chainT<1.05&&A.chain>0)dmg*=1+Math.min(.3,A.chain*.07);
+    const pinned=this.pos==='stand'&&((D.x-LV.L<7&&A.x>D.x)||(LV.R-D.x<7&&A.x<D.x));if(pinned)dmg*=1.1;
     const canBlock=D.block&&!D.act&&D.down<=0&&k!=='soccer'&&!(D.open>0);
     if(canBlock){D.st.blocked++;this.idle=0;
       if(m.tgt==='legs'){A.legs=Math.max(0,A.legs-4);D.legs=Math.max(0,D.legs-1);this.emit('block',{x:D.x,y:-8,F:D});this.say(`${D.name} checks the leg kick.`);this.pts(D,1);return}
-      dmg*=this.pos==='ground'?.32:.2;D.sta=Math.max(0,D.sta-3);this.emit('block',{x:D.x,y:m.tgt==='body'?-17:-25,F:D});
+      dmg*=this.pos==='ground'?.32:m.tgt==='body'?.55:.2;D.sta=Math.max(0,D.sta-3);this.emit('block',{x:D.x,y:m.tgt==='body'?-17:-25,F:D});
       return this.applyDmg(A,D,m,k,dmg,true,false)}
     this.applyDmg(A,D,m,k,dmg,false,counter)
   }
-  whiff(A){this.emit('whoosh',{x:A.x+A.face*10})}
+  whiff(A){this.emit('whoosh',{x:A.x+A.face*10});const a=A.act;
+    if(a&&(a.m.risk||a.k==='over'||a.k==='hkick')){A.open=a.m.risk?.55:.35;A.sta=Math.max(0,A.sta-2);if(a.m.risk&&Math.random()<.5)this.say(`${A.name} misses the ${a.m.nm} and is wide open!`);if(A.human&&a.m.risk)this.flash("Missed! You're open")}}
+  dashIn(F){if(this.pos!=='stand'||!this.canAct(F)||F.sta<5||F.o.down>0)return;F.dash=.2;F.sta-=5;F.vx=F.face*92;this.emit('whoosh',{x:F.x})}
   applyDmg(A,D,m,k,dmg,blocked,counter){
     if(m.tgt==='head'){dmg*=1.27-D.f.r.chn/110;D.head-=dmg;D.headMax=Math.max(30,D.headMax-dmg*.22)}
-    else if(m.tgt==='body'){D.body=Math.max(0,D.body-dmg*1.1);D.sta=Math.max(0,D.sta-dmg*.8)}
+    else if(m.tgt==='body'){D.body=Math.max(0,D.body-dmg*(blocked?.5:.85));D.sta=Math.max(0,D.sta-dmg*.45);D.head-=dmg*.25}
     else D.legs=Math.max(0,D.legs-dmg);
     if(this.pos==='ground'&&this.g){const g=this.g;if(blocked){if(g.top===A)g.mom=Math.min(.16,(g.mom||0)+.008)}else if(g.top===A&&dmg>=2){g.lull=0;g.mom=Math.max(0,(g.mom||0)-.006*dmg)}}
-    if(blocked)return;
+    if(blocked){if(m.tgt==='body'&&this.pos==='stand'&&dmg>2)this.emit('hit',{x:D.x,y:-17,big:false,dmg,F:D,A,body:1});return}
+    A.chain=A.chainT<1.05?A.chain+1:1;A.chainT=0;D.chain=0;
+    const trade=this.pos==='stand'&&this.T-D.landT<.16;A.landT=this.T;
+    this.momentum(A,m.pts*2.6+(counter?6:0)+(A.chain>=3?4:0)+(trade?3:0));D.mo=Math.max(0,D.mo-dmg*.5);
+    if(trade&&m.pow){this.say(`They trade! Both men land!`,true);this.emit('crowd')}
+    if(A.chain>=3)this.emit('combo',{n:A.chain,F:D,A});
     A.st.landed++;A.st[m.tgt]++;D.hitT=0;this.idle=0;this.pts(A,m.pts*(counter?1.4:1));
     const hy=m.tgt==='head'?-26:m.tgt==='body'?-17:-6;
-    this.emit('hit',{x:D.x-D.face*1,y:hy,big:!!m.pow,dmg,F:D,A,blood:m.pow&&dmg>6&&Math.random()<.35});
+    this.emit('hit',{x:D.x-D.face*1,y:hy,big:!!m.pow,dmg,F:D,A,blood:m.pow&&dmg>6&&Math.random()<.35,tgt:m.tgt,k});
     this.shake=Math.max(this.shake,m.pow?2.6:1);
     if(this.pos==='ground'){if(this.g.top===A)this.g.unans++;else this.g.unans=0}else{A.unans++;D.unans=0}
     if(D.act&&D.act.ph==='w'&&dmg>=3&&D.act.k!=='shoot')D.act=null;
-    if(this.pos==='stand'){D.hurt=Math.min(.34,.1+dmg*.02);D.x-=D.face*(m.pow?3:1.5)}
+    const pinned=this.pos==='stand'&&((D.x-LV.L<7&&A.x>D.x)||(LV.R-D.x<7&&A.x<D.x));
+    if(this.pos==='stand'){D.hurt=Math.min(.34,.1+dmg*.02);D.x-=D.face*(m.pow?1.5:.8);D.kb=-D.face*(m.push||(3+dmg*1.5))*(pinned?.25:1);
+      if(m.push&&D.act&&D.act.ph!=='r'&&D.act.k!=='shoot'){D.act=null;this.say(`${A.name} stops him with a teep.`)}
+      if(pinned&&m.pow&&Math.random()<.25)this.say(`${A.name} has him pinned against the ${this.ring?'ropes':'fence'}!`)}
     if(counter&&A.human)this.flash('Counter!');
     if(m.tgt==='head'&&D.head<=0){const meth=this.pos==='ground'?(this.g.pounce?'TKO (punches)':'TKO (ground and pound)'):k==='soccer'?'TKO (soccer kicks)':`KO (${m.nm})`;return this.finish(A,meth)}
     if(m.tgt==='legs'&&D.legs<=0&&this.pos==='stand'){D.legKD++;if(D.legKD>=2)return this.finish(A,'TKO (leg kicks)');D.legs=20;return this.knockdown(A,D,m,true)}
     if(this.pos==='ground'){const g=this.g;
       if(g.top===A&&((D.head<17&&g.unans>=5)||(g.pounce&&g.t<5&&D.head<18&&g.unans>=4)))return this.finish(A,g.pounce?'TKO (punches)':'TKO (ground and pound)');
       return}
-    if(m.pow){const ch=clamp((dmg-6)/62+(42-D.head)/135-(D.f.r.chn-60)/230+(counter?.04:0),0,.4);if(Math.random()<ch)return this.knockdown(A,D,m)}
+    if(m.pow){const ch=clamp((dmg-5.5)/55+(44-D.head)/125-(D.f.r.chn-60)/230+(counter?.05:0),0,.42);if(Math.random()<ch)return this.knockdown(A,D,m)}
     if(k==='soccer'&&D.head<32)return this.finish(A,'TKO (soccer kicks)');
-    if(D.head<34&&m.pow&&D.stag<=0){D.stag=1.1;this.say(`${D.name} is hurt!`,true)}
+    if(D.head<34&&m.pow&&D.stag<=0){D.stag=1.1;D.kb=-D.face*40;this.say(`${D.name} is rocked!`,true);this.momentum(A,10);this.emit('rocked',{F:D});if(A.human)this.flash("He's rocked! Pour it on");else if(D.human)this.flash("You're rocked! Cover up")}
+    if(k==='spin'&&dmg>9&&Math.random()<.18)return this.knockdown(A,D,m);
     if(D.stag>0&&D.head<10&&A.unans>=4)return this.finish(A,'TKO (punches)');
-    if(m.tgt==='body'&&D.body<22&&m.pow&&Math.random()<.22)return this.knockdown(A,D,m);
+    if(m.tgt==='body'&&this.pos==='stand'){
+      if(D.body<=0&&m.pow){if(D.kdR>=1||D.sta<15)return this.finish(A,`TKO (${m.nm})`);D.body=12;return this.knockdown(A,D,m)}
+      if(D.body<35&&m.pow&&Math.random()<.06+(35-D.body)/180){D.stag=Math.max(D.stag,.9);if(Math.random()<.45)return this.knockdown(A,D,m);this.say(`${D.name} folds from the ${m.nm}!`,true);this.emit('rocked',{F:D})}}
     if(m.pow&&Math.random()<.35)this.say(pick(LHIT).replace('%A',A.name).replace('%D',D.name));
   }
+  momentum(F,v){if(F.fire>0||this.phase!=='fight')return;F.mo=Math.min(100,F.mo+v);
+    if(F.mo>=100){F.mo=0;F.fire=7;this.say(`${F.name} is on fire! The crowd is on its feet!`,true);this.emit('fire',{F});this.emit('crowd');if(F.human)this.flash("You're on fire!")}}
   knockdown(A,D,m,leg){
     if(this.pos==='clinch'){this.pos='stand';D.x=A.x+A.face*12}
     D.down=1.8;D.act=null;D.vx=0;D.block=false;D.kdR++;D.stag=0;
-    if(!leg){A.st.kd++;this.rkd[this.round-1][A.side]++;this.pts(A,12)}else this.pts(A,6);
+    if(!leg){A.st.kd++;this.rkd[this.round-1][A.side]++;this.pts(A,12)}else this.pts(A,6);this.momentum(A,28);D.mo=0;
     this.slow=.7;this.shake=5;this.emit('kd',{x:D.x});
     this.say(leg?`${D.name}'s leg gives out and he goes down!`:`${A.name} drops ${D.name} with a ${m.nm}!`,true);this.banner('KNOCKDOWN');
     if(D.kdR>=3)this.finish(A,'TKO (three knockdowns)');
@@ -246,7 +283,7 @@ class LiveFight{
     const counter=!!(D.act&&D.act.ph!=='r'&&D.act.m.dmg),spr=D.sprawl;
     let p=.33+(A.f.r.wre-D.f.r.wre)/75+(counter?.25:0)+(D.sta<30?.1:0)-(A.sta<25?.15:0)-(spr?.42:0)+(D.stag>0?.15:0)-(this.ring?.03:0)-(D.block&&!spr?.08:0)+(A.tdTry>=3?-.05:0);
     p=clamp(p,.05,.9);D.sprawl=false;this.sprawlW=null;A.shootCD=4+Math.random()*3.5;A.tdTry=(A.tdTry||0)+1;
-    if(Math.random()<p){this.toGround(A,D,A.f.r.wre>D.f.r.wre+8&&Math.random()<.4?'half':'guard');A.st.td++;this.pts(A,5);
+    if(Math.random()<p){this.toGround(A,D,A.f.r.wre>D.f.r.wre+8&&Math.random()<.4?'half':'guard');A.st.td++;this.pts(A,5);this.momentum(A,12);
       this.emit('slam',{x:A.x});this.shake=3;this.say(counter?`${A.name} times the shot perfectly. Takedown!`:`Takedown ${A.name}!`,true)}
     else{A.act=null;A.vx=0;A.stuff=spr?.85:.5;A.x-=A.face*(spr?2:4);this.pts(D,spr?2:1);this.emit('block',{x:D.x,y:-12,F:D});A.sta=Math.max(0,A.sta-(spr?6:2));
       if(spr){A.open=.7;this.fhl={side:D.side,until:this.T+.9};this.say(`${D.name} sprawls and stuffs the shot. He has the front headlock!`);if(D.human)this.flash('Stuffed! Shoot: go behind · Hold Power: guillotine')}
@@ -287,7 +324,7 @@ class LiveFight{
     if(!A.human&&this.T-this.ctEnd<LV.BREATH*(D.human?1:.5))return;
     const s=kind==='getup'||kind==='trip'||kind==='lock'||kind==='snap'?'wre':'grp';
     const s2=kind==='snap'?'grp':kind==='guil'?'grp':s;
-    let need={adv:.55,sweep:.58,escape:.54,getup:.57,trip:.54,lock:.54,sub:.66,snap:.42,guil:.66}[kind],sub=null,g=this.g;
+    let need={adv:.55,sweep:.58,escape:.54,getup:.57,trip:.54,lock:.54,sub:.66,snap:.42,guil:.71}[kind],sub=null,g=this.g;
     if(kind==='getup'&&g&&g.pos==='side')need+=.07;
     if(kind==='sub'){const pos=g.pos;sub=pick(LSUBS[pos]||LSUBS.guard);
       need=.69-({back:.06,mount:.04,side:.02}[pos]||0)-(D.head<40?.03:0)-(D.sta<30?.03:0)+(g.bot===A?.04:0);A.st.sub++;this.pts(A,2)}
@@ -350,15 +387,19 @@ class LiveFight{
     while(this.taps.length){const k=this.taps.shift();
       if(this.ct){if(k!=='L'&&k!=='R'&&k!=='dodge')this.tap(F);continue}
       if(this.T-this.ctEnd<LV.TAPGRACE)continue;
-      if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k!=='L'&&k!=='R')this.doAct(F,k)}
+      if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k==='dash')this.dashIn(F);else if(k!=='L'&&k!=='R')this.doAct(F,this.dirKey(F,k))}
     if(this.pos==='ground'&&this.g.top===F&&!this.ct){
       this.g.leave=this.inp.dir!==0?this.g.leave+dt:0;
       if(this.g.leave>.4)this.standUp(`${F.name} stands up and lets him back up.`,'topstand')}
   }
+  // stick direction turns the strike buttons into different moves while standing
+  dirKey(F,k){if(this.pos!=='stand'||F.o.down>0||(this.fhl&&this.fhl.side===F.side))return k;const d=this.inp.dir,fw=d&&Math.sign(d)===F.face,bk=d&&Math.sign(d)===-F.face;
+    if(k==='P'&&bk)return'Pb';if(k==='Pc'&&fw)return'Pfc';if(k==='K'&&fw)return'Kf';if(k==='K'&&bk)return'Kb';if(k==='Kc'&&fw)return'Kfc';return k}
   aiCtl(F,dt){const A=F.ai,O=F.o,D=this.aiD(F),st=LSTYLE[F.f.style]||LSTYLE['All-rounder'];
     A.t-=dt;const wasB=F.block;if(A.blockT>0){A.blockT-=dt;F.block=!F.act&&F.down<=0&&!this.ct&&(this.pos!=='ground'||this.g.bot===F)}else F.block=false;
     if(F.block&&!wasB)F.blockT0=this.T-(Math.random()<.78?.3:0);
     if(this.ct)return;
+    if(this.pos==='stand'&&A.combo>0&&F.act&&F.act.ph==='r'&&LCHAIN.has(F.act.k)&&F.act.t>.04){A.combo--;const gap=Math.abs(F.x-O.x),c=pick(gap<13?['cross','hook','upper','body','hook']:['jab','cross','lkick','bkick','cross']);if(gap<=LMV[c].rng+1)this.doAct(F,c);else A.combo=0}
     if(this.pos==='stand'&&this.fhl&&this.fhl.side===F.side&&this.canAct(F)&&Math.random()<dt*4){const r=Math.random(),gr=F.f.r.grp/70;
       this.doAct(F,r<.3*gr?'Pc':r<.75?'S':'K');return}
     if(this.pos==='stand'&&O.act&&O.act.ph==='w'&&(O.act.m.dmg||O.act.k==='shoot')&&A.seen!==O.act){A.seen=O.act;A.react=D.react*(.8+Math.random()*.5)}
@@ -377,19 +418,20 @@ class LiveFight{
   aiStand(F,O,D,st){const gap=Math.abs(F.x-O.x),A=F.ai;
     if(O.down>0){if(Math.random()<st.ag*D.ag+.2){A.dir=1;if(gap<16)this.doAct(F,this.ring&&Math.random()<.2?'K':(Math.random()<.5?'S':'P'))}else A.dir=0;return}
     if(F.sta<22){A.dir=-1;A.blockT=.5;return}
+    if(gap>22&&gap<34&&Math.random()<.07*st.ag&&this.canAct(F)){this.dashIn(F);return}
     const want=st.want+(O.stag>0?-4:0)+(F.legs<40?2:0);
     A.dir=gap>want+2?1:gap<want-3?(F.f.style==='Brawler'||F.f.style==='Wrestler'?0:-1):(Math.random()<.35?(Math.random()<.5?1:-1):0);
-    const ag=st.ag*D.ag*(O.stag>0?1.6:1)*(F.sta<40?.6:1)*(O.block?.85:1);
+    const ag=st.ag*D.ag*(O.stag>0?1.6:1)*(F.sta<40?.6:1)*(O.block?.85:1)*(F.fire>0?1.3:1);
     if(Math.random()>ag||F.act)return;
     const opts=[];for(const [k,w] of Object.entries(st.w)){if(!w)continue;
       if(k==='shoot'){if(gap>=12&&gap<=27&&F.shootCD<=0)opts.push([k,w*(O.block?1.6:1)*(F.tdTry>=4?.6:1)])}
       else if(k==='clinch'){if(gap<12)opts.push([k,w*3])}
-      else if(gap<=LMV[k].rng+1)opts.push([k,w])}
+      else if(gap<=LMV[k].rng+1)opts.push([k,w*(LMV[k].tgt==='body'&&O.block?2.6:1)*(k==='teep'&&Math.sign(O.vx)===O.face&&Math.abs(O.vx)>4?2.2:1)*(k==='superman'&&gap<14?.2:1)])}
     if(!opts.length){A.dir=1;return}
     let tot=opts.reduce((s,o)=>s+o[1],0),x=Math.random()*tot,ch=opts[0][0];for(const [k,w] of opts){x-=w;if(x<0){ch=k;break}}
-    const key={jab:'J',cross:'P',hook:'P',over:'Pc',lkick:'K',hkick:'Kc',shoot:'S',clinch:'S'}[ch];
+    const key={jab:'J',cross:'P',hook:'P',over:'Pc',lkick:'K',hkick:'Kc',shoot:'S',clinch:'S',upper:'U',body:'Pb',superman:'Pfc',bkick:'Kf',teep:'Kb',spin:'Kfc'}[ch];
     this.doAct(F,key);
-    if(ch==='jab'&&Math.random()<.45){F.queue='P';F.qT=.4}
+    if(LCHAIN.has(ch)&&Math.random()<(st.cmb||.4)*(F.sta>40?1:.5))A.combo=1+(Math.random()<.45?1:0)+(Math.random()<.2?1:0);
     if(O.open>0&&this.canAct(F)&&Math.random()<.45)this.doAct(F,Math.random()<.5?'P':'K')}
   aiClinch(F,O,D,st){const r=Math.random(),wr=F.f.style==='Wrestler'||F.f.style==='BJJ';
     if(F.sta<18){this.breakAttempt(F);return}
@@ -419,12 +461,12 @@ class LiveFight{
   physics(dt){const [a,b]=this.F;
     if(this.pos==='stand'){
       for(const F of this.F){
-        if(F.down>0||(F.act&&F.act.k==='shoot'&&F.act.ph==='a'&&!F.act.done)||F.dodge>0){F.vx*=F.down>0?.8:1;continue}
+        if(F.down>0||(F.act&&F.act.k==='shoot'&&F.act.ph==='a'&&!F.act.done)||(F.act&&F.act.m.lunge&&F.act.ph==='w')||F.dodge>0||F.dash>0){F.vx*=F.down>0?.8:1;continue}
         const dir=F.human?this.inp.dir:(F.ai.dir||0)*F.face;
         let sp=F.mv*(.55+.45*F.legs/100)*(F.block?.5:1)*(F.stag>0?.6:1)*(F.act?.25:1)*(F.sta<15?.7:1)*(F.hurt>0?.3:1);
         if(dir&&Math.sign(dir)!==F.face)sp*=.85;
         F.vx+=(dir*sp-F.vx)*Math.min(1,dt*14)}
-      for(const F of this.F){F.x=clamp(F.x+F.vx*dt,LV.L,LV.R)}
+      for(const F of this.F){F.x=clamp(F.x+(F.vx+F.kb)*dt,LV.L,LV.R);F.kb*=Math.exp(-dt*7);if(Math.abs(F.kb)<1)F.kb=0}
       let gap=b.x-a.x;const s=a.face;
       if(gap*s<LV.MINGAP){const need=LV.MINGAP-gap*s;a.x-=s*need/2;b.x+=s*need/2;
         if(a.x<LV.L||a.x>LV.R){a.x=clamp(a.x,LV.L,LV.R);b.x=a.x+s*LV.MINGAP}
@@ -432,6 +474,7 @@ class LiveFight{
       if(a.down<=0&&b.down<=0){a.face=b.x>=a.x?1:-1;b.face=-a.face}
     }else if(this.pos==='clinch'){const mid=(a.x+b.x)/2;a.x=mid-a.face*4.5;b.x=mid+a.face*4.5;a.vx=b.vx=0}
     else{a.vx=b.vx=0}
+    if(this.pos!=='stand')for(const F of this.F)F.kb=0;
   }
 
   /* ---------------- rounds and results ---------------- */
@@ -446,7 +489,7 @@ class LiveFight{
     this.phase='break';this.pt=0;this.say(`End of round ${this.round}.`)}
   nextRound(){if(this.phase!=='break')return;
     for(const F of this.F){F.head=Math.min(F.headMax,F.head+18);F.sta=Math.min(100,F.sta+50);F.body=Math.min(100,F.body+10);F.legs=Math.min(100,F.legs+8);
-      F.act=null;F.queue=null;F.down=0;F.stag=0;F.hurt=0;F.kdR=0;F.unans=0;F.block=false;F.vx=0}
+      F.act=null;F.queue=null;F.down=0;F.stag=0;F.hurt=0;F.kdR=0;F.unans=0;F.block=false;F.vx=0;F.kb=0;F.fire=0;F.chain=0;F.mo*=.5}
     this.round++;this.clock=this.rounds[this.round-1]*60;this.el=0;this.rp.push([0,0]);this.rkd.push([0,0]);this.log.push([]);
     this.pos='stand';this.g=null;this.ct=null;this.idle=0;this.fhl=null;this.lastStand='round';for(const F of this.F){F.tdTry=0;F.open=0}const [a,b]=this.F;a.x=LV.W/2-15;b.x=LV.W/2+15;a.face=1;b.face=-1;
     this.phase='intro';this.pt=0}

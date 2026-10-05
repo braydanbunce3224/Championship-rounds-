@@ -1,12 +1,14 @@
 // Championship Rounds service worker: lets the game install to a phone home screen and play offline.
 // Bump VERSION whenever you change index.html, css/ or js/ so players pick up the new build.
-const VERSION = 'cr-v5';
+const VERSION = 'cr-v6';
 const SHELL = [
   './',
   'index.html',
   'css/styles.css',
+  'js/vendor/three.min.js',
   'js/fight.js',
   'js/fightview.js',
+  'js/fight3d.js',
   'js/game.js',
   'manifest.webmanifest',
   'icons/icon-192.png',

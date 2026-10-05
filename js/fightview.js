@@ -67,8 +67,16 @@ PO.ref={H:[1,-29],N:[0,-24],P:[0,-14],Eb:[-2,-19],Hb:[-1,-15],Ef:[2,-19],Hf:[3,-
 PO.refCrouch={H:[5,-22],N:[3,-18],P:[-1,-10],Eb:[2,-13],Hb:[5,-10],Ef:[5,-13],Hf:[8,-10],Kb:[-4,-5],Fb:[-6,0],Kf:[4,-6],Ff:[5,0]};
 PO.refRaise={H:[1,-29],N:[0,-24],P:[0,-14],Eb:[-2,-19],Hb:[-1,-15],Ef:[4,-28],Hf:[6,-34],Kb:[-2,-7],Fb:[-3,0],Kf:[2,-7],Ff:[3,0]};
 PO.refStop={H:[3,-28],N:[2,-24],P:[0,-14],Eb:[4,-21],Hb:[9,-22],Ef:[5,-22],Hf:[10,-24],Kb:[-3,-7],Fb:[-5,0],Kf:[3,-7],Ff:[6,0]};
-const PCH={jab:['jabC','jabX'],cross:['crossC','crossX'],hook:['hookC','hookX'],over:['overC','overX'],lkick:['lkC','lkX'],hkick:['hkC','hkX'],soccer:['lkC','socX'],shoot:['shC','shX'],knee:['clinch','kneeX'],cpunch:['clinch','cpX']};
-const TRAIL={cross:'Hb',hook:'Hf',over:'Hb',hkick:'Fb',lkick:'Fb',soccer:'Fb',knee:'Kf'};
+PO.upC=ov(PO.stance,{N:[1,-23],P:[0,-13],H:[3,-28],Eb:[0,-17],Hb:[3,-15]});PO.upX=ov(PO.stance,{N:[3,-24],H:[4,-29],P:[1,-14],Eb:[7,-20],Hb:[9,-28]});
+PO.bodyC=ov(PO.stance,{P:[0,-12],N:[2,-21],H:[4,-26],Ef:[6,-17],Hf:[5,-15],Kf:[4,-6],Kb:[-4,-6]});PO.bodyX=ov(PO.bodyC,{Ef:[8,-16],Hf:[13,-17],N:[4,-21],H:[6,-25],P:[1,-12]});
+PO.supC=ov(PO.stance,{P:[-1,-16],N:[0,-26],H:[2,-31],Kb:[-6,-10],Fb:[-11,-8],Kf:[3,-9],Ff:[5,-3],Eb:[-3,-25],Hb:[-1,-29]});
+PO.supX={H:[7,-29],N:[5,-25],P:[1,-15],Eb:[9,-27],Hb:[17,-27],Ef:[3,-21],Hf:[5,-24],Kb:[-6,-9],Fb:[-12,-6],Kf:[3,-8],Ff:[5,-1]};
+PO.bkX=ov(PO.stance,{P:[1,-14],N:[-2,-24],H:[-2,-28],Kb:[8,-15],Fb:[15,-17],Eb:[-3,-18],Hb:[-1,-21]});
+PO.teepC=ov(PO.stance,{Kf:[6,-14],Ff:[5,-9]});PO.teepX=ov(PO.stance,{N:[-2,-24],H:[-2,-28],Kf:[9,-14],Ff:[16,-15],P:[0,-14]});
+PO.spinC=ov(PO.stance,{H:[-1,-28],N:[-1,-24],Kb:[-1,-10],Fb:[-4,-6]});
+PO.spinX={H:[-6,-25],N:[-4,-22],P:[0,-14],Eb:[-6,-18],Hb:[-3,-21],Ef:[-2,-18],Hf:[1,-21],Kf:[-2,-7],Ff:[-4,0],Kb:[8,-15],Fb:[17,-15]};
+const PCH={upper:['upC','upX'],body:['bodyC','bodyX'],superman:['supC','supX'],bkick:['lkC','bkX'],teep:['teepC','teepX'],spin:['spinC','spinX'],jab:['jabC','jabX'],cross:['crossC','crossX'],hook:['hookC','hookX'],over:['overC','overX'],lkick:['lkC','lkX'],hkick:['hkC','hkX'],soccer:['lkC','socX'],shoot:['shC','shX'],knee:['clinch','kneeX'],cpunch:['clinch','cpX']};
+const TRAIL={upper:'Hb',body:'Hf',superman:'Hb',bkick:'Fb',spin:'Fb',cross:'Hb',hook:'Hf',over:'Hb',hkick:'Fb',lkick:'Fb',soccer:'Fb',knee:'Kf'};
 const GB={
   guard:{H:[-15,-4],N:[-11,-4],P:[-1,-4],Eb:[-9,-9],Hb:[-11,-12],Ef:[-7,-10],Hf:[-9,-13],Kb:[4,-10],Fb:[11,-8],Kf:[6,-12],Ff:[12,-11]},
   half:{H:[-15,-4],N:[-11,-4],P:[-1,-4],Eb:[-9,-8],Hb:[-11,-11],Ef:[-7,-9],Hf:[-8,-12],Kb:[4,-7],Fb:[9,-3],Kf:[5,-5],Ff:[11,-2]},
@@ -204,7 +212,7 @@ const ICO={
   swap:'<path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/>',
   knee:'<path d="M8 3v8l6 3M14 14l-3 7"/><circle cx="14" cy="14" r="1.6"/>',
   tap:'<path d="M9 11.5V5.5a2 2 0 0 1 4 0V11M13 10a2 2 0 0 1 4 0v3M9 11.5l-2-2a2 2 0 0 0-3 2.6l5 6.2a5 5 0 0 0 4 1.9h2a5 5 0 0 0 5-5v-3.2a2 2 0 0 0-3-1.7"/>'};
-const LBLICO={Jab:'fist',Punches:'fist',Punch:'fist',Strike:'fist',Power:'power',Elbow:'power',Knee:'knee',Kick:'kick',Trip:'kick','Soccer kick':'kick',Shoot:'shoot',Clinch:'shoot','Body lock':'shoot',Pounce:'shoot',Advance:'up','Get up':'up','Go behind':'up',Choke:'lock',Catch:'shoot',Sweep:'swap',Escape:'swap',Submit:'lock',Block:'shield',Break:'shield',Posture:'shield',Defend:'shield'};
+const LBLICO={Jab:'fist',Punches:'fist',Punch:'fist',Strike:'fist',Power:'power',Elbow:'power',Knee:'knee',Kick:'kick',Trip:'kick','Soccer kick':'kick',Shoot:'shoot',Clinch:'shoot','Body lock':'shoot',Pounce:'shoot',Advance:'up',Body:'power','Body kick':'kick',Teep:'kick','Get up':'up','Go behind':'up',Choke:'lock',Catch:'shoot',Sweep:'swap',Escape:'swap',Submit:'lock',Block:'shield',Break:'shield',Posture:'shield',Defend:'shield'};
 class LiveView{
   constructor(host,o){this.o=o;this.f=new LiveFight(o);this.speed=1;this.acc=0;this.last=0;this.parts=[];this.decals=[];this.stop=0;this.zoom=1;this.hype=0;this.ghost=[100,100];this.over=null;
     this.kind=o.arena||'EXH';this.bg=buildBg(this.kind,o.ring);this.crowd=buildCrowd(this.kind);this.vig=buildVignette();[this.buf,this.bx]=mkCanvas(FVW,FVH);
@@ -213,7 +221,7 @@ class LiveView{
     this.ref={x:LV.W/2,look:lookOf({id:'ref'+(o.a.id||'')},0),pose:PO.ref};
     host.insertAdjacentHTML('beforeend',`<div class="live${this.swap?' swap':''}" id="live" role="application" aria-label="Live fight">
       <div class="lhud">${[A,B].map((F,i)=>this.plate(F,i)).join('')}</div>
-      <div class="lstage"><canvas width="${FVW}" height="${FVH}"></canvas><div class="lban"></div><div class="lflash"></div>
+      <div class="lstage"><canvas width="${FVW}" height="${FVH}"></canvas><div class="lban"></div><div class="lflash"></div><div class="lcombo"></div>
         <div class="lct" hidden><div class="lctn"><span></span><b></b><span></span></div><div class="lctbar"><i></i><em></em></div></div></div>
       <div class="lcall"><span class="lchip">Live</span><span class="ltxt"></span></div>
       <div class="lpad">${this.f.human?this.padHTML():this.watchHTML()}<div class="ltapzone" hidden><div class="ltz"><span>${svg(ICO.tap)}</span><b>Tap!</b><small></small></div></div></div>
@@ -223,14 +231,15 @@ class LiveView{
     hud.insertBefore(hud.querySelector('.lclk'),hud.children[1]);
     this.cv=this.el.querySelector('canvas');this.ctx=this.cv.getContext('2d');this.ctx.imageSmoothingEnabled=false;
     this.q=s=>this.el.querySelector(s);
-    this.ui={hp:[...this.el.querySelectorAll('.lhp .cur')],gh:[...this.el.querySelectorAll('.lhp .ghost')],mx:[...this.el.querySelectorAll('.lhp .max')],st:[...this.el.querySelectorAll('.lsta i')],fs:[...this.el.querySelectorAll('.lfs')],
+    this.mo=[...this.el.querySelectorAll('.lmo i')];this.ui={hp:[...this.el.querySelectorAll('.lhp .cur')],gh:[...this.el.querySelectorAll('.lhp .ghost')],mx:[...this.el.querySelectorAll('.lhp .max')],st:[...this.el.querySelectorAll('.lsta i')],fs:[...this.el.querySelectorAll('.lfs')],
       body:[...this.el.querySelectorAll('.lbody')],pips:[...this.el.querySelectorAll('.lpips i')],tm:this.q('.ltm'),ban:this.q('.lban'),fl:this.q('.lflash'),ct:this.q('.lct'),call:this.q('.ltxt'),over:this.q('.lover'),tz:this.q('.ltapzone'),knob:this.q('.lknob')};
+    this.r3=null;if(lsGetV('cr.gfx')!=='2d'&&typeof can3D==='function'&&can3D()){try{this.r3=new Arena3D(this)}catch(e){console.warn('3D renderer unavailable',e);this.r3=null}}
     this.bind();LIVE_ON=true;window.__live=this;this.layoutPad();this.onResize=()=>this.layoutPad();window.addEventListener('resize',this.onResize);
     this.showBanner(`${esc(A.name)} <span style="color:var(--acc)">vs</span> ${esc(B.name)}`,o.title?'Title fight':`${o.rounds.length} round${o.rounds.length>1?'s':''}`,1.6);
     this.loop=this.loop.bind(this);this.raf=requestAnimationFrame(this.loop)}
   plate(F,i){const rec=F.f.w!=null?`${F.f.w}-${F.f.l}${F.f.d?'-'+F.f.d:''}`:'';
     return `<div class="lfs ${i?'b':'a'}"><div class="lplate"><i class="cor"></i><b class="lnm">${esc(F.name)}</b>${F.human?'<em>You</em>':''}</div>
-      <div class="lhp"><i class="max"></i><i class="ghost"></i><i class="cur"></i></div><div class="lsub"><div class="lsta"><i></i></div>
+      <div class="lhp"><i class="max"></i><i class="ghost"></i><i class="cur"></i></div><div class="lsub"><div class="lsta"><i></i></div><div class="lmo" title="Momentum"><i></i></div>
       <svg class="lbody" viewBox="0 0 10 22" aria-hidden="true"><circle cx="5" cy="3" r="2.6"/><rect x="2.4" y="6.4" width="5.2" height="7" rx="1.4"/><rect x="2.6" y="13.8" width="4.8" height="7.6" rx="1.2"/></svg></div>
       <div class="lmeta">${esc(F.f.style||'')}${rec?' · '+rec:''}</div></div>`}
   padHTML(){const b=(k,cls,lbl,ico)=>`<button class="lbtn ${cls}" data-k="${k}"><span class="lring"></span><span class="lic">${svg(ICO[ico])}</span><b>${lbl}</b><small></small></button>`;
@@ -261,7 +270,9 @@ class LiveView{
     if(d!==s.dir){if(d!==0)this.dirStart(d);s.dir=d}if(this.ui.knob)this.ui.knob.style.transform=`translateX(${clamp(dx,-lim,lim)}px)`}
   stickUp(){this.stick={id:null,dir:0};if(this.ui.knob)this.ui.knob.style.transform=''}
   dirStart(d){const f=this.f,H=f.human;if(!H||this.over)return;if(f.ct){f.taps.push(d<0?'L':'R');return}
-    if(d!==H.face&&f.pos==='stand'){const now=performance.now();if(now-this.backTap<300){f.taps.push('dodge');this.backTap=0}else this.backTap=now}}
+    if(f.pos!=='stand')return;const now=performance.now();
+    if(d!==H.face){if(now-this.backTap<300){f.taps.push('dodge');this.backTap=0}else this.backTap=now}
+    else{if(now-(this.fwdTap||0)<300){f.taps.push('dash');this.fwdTap=0}else this.fwdTap=now}}
   tapZone(e){const f=this.f;if(!f.ct)return;f.taps.push('J');SFX.play('tap');const z=this.ui.tz.querySelector('.ltz');z.classList.remove('hit');void z.offsetWidth;z.classList.add('hit');try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
   press(k,b){const f=this.f,H=f.human;if(!H||this.over)return;b&&b.classList.add('on');
     if(k==='L'||k==='R'){this.hold[k]=true;this.dirStart(k==='L'?-1:1);return}
@@ -280,10 +291,14 @@ class LiveView{
     else if(c==='sound'){SFX.set(!SFX.on);this.overlay('pause')}
     else if(c==='swap'){this.swap=!this.swap;lsSetV('cr.swap',this.swap?'1':'0');this.el.classList.toggle('swap',this.swap);this.overlay('pause')}
     else if(c==='help')this.overlay('help');
+    else if(c==='gfx'){const to3=!this.r3;lsSetV('cr.gfx',to3?'3d':'2d');
+      if(to3&&typeof can3D==='function'&&can3D()){try{this.r3=new Arena3D(this)}catch(e){this.r3=null}}
+      else if(!to3&&this.r3){this.r3.dispose();const c=document.createElement('canvas');c.width=FVW;c.height=FVH;this.cv.replaceWith(c);this.cv=c;this.ctx=c.getContext('2d');this.ctx.imageSmoothingEnabled=false;this.r3=null}
+      this.overlay('pause')}
     else if(c==='next'){f.nextRound();this.overlay(null)}
     else if(c==='done')this.close(f.res);
     else if(c==='quit')this.close(null)}
-  close(res){cancelAnimationFrame(this.raf);window.removeEventListener('resize',this.onResize);document.removeEventListener('keydown',this.onKey);document.removeEventListener('keyup',this.onKey);clearTimeout(this.ctP);clearTimeout(this.ctK);
+  close(res){cancelAnimationFrame(this.raf);if(this.r3)this.r3.dispose();window.removeEventListener('resize',this.onResize);document.removeEventListener('keydown',this.onKey);document.removeEventListener('keyup',this.onKey);clearTimeout(this.ctP);clearTimeout(this.ctK);
     this.el.remove();LIVE_ON=false;const cb=this.o.onEnd;cb&&cb(res)}
 
   /* ---------- loop ---------- */
@@ -297,8 +312,8 @@ class LiveView{
       if(f.phase==='break'&&!this.over){if(f.human)this.overlay('break');else{this.brk=(this.brk||0)+dt;if(this.brk>(this.ff?0:2.2)){this.brk=0;f.nextRound()}}}
       if(f.phase==='end'&&f.pt>(this.ff?0:1.9)&&!this.over)this.overlay('end')}
     this.hype=Math.max(0,this.hype-dt*.5);
-    this.updRef(dt);this.updParts(dt);this.draw(dt);this.hud(dt)}
-  drain(){const f=this.f;while(f.ev.length)this.onEv(f.ev.shift())}
+    this.updRef(dt);if(this.r3)this.r3.frame(dt);else{this.updParts(dt);this.draw(dt)}this.hud(dt)}
+  drain(){const f=this.f;while(f.ev.length){const e=f.ev.shift();this.onEv(e);if(this.r3&&!this.ff)try{this.r3.onEv(e)}catch(_){}}}
   onEv(e){const f=this.f,ff=this.ff;if(ff&&e.type!=='banner')return;
     switch(e.type){
       case'hit':{const p=this.hitPos(e),big=e.big;
@@ -317,6 +332,9 @@ class LiveView{
       case'crowd':SFX.play('crowd',true);this.hype=1;break;
       case'banner':if(!ff)this.showBanner(e.t,'',1.4);break;
       case'flash':this.showFlash(e.t);break;
+      case'combo':this.showCombo(e.n);break;
+      case'fire':SFX.play('crowd',true);this.hype=1;break;
+      case'rocked':this.hype=Math.min(1,this.hype+.5);break;
       case'contestEnd':if(e.human!=null)this.showFlash(e.human?'You win the scramble!':'Lost the scramble');break;
     }}
   hitPos(e){const f=this.f,F=e.F;if(f.pos==='ground'&&f.g){const b=f.g.bot,fb=b.face,J=F===b?GB[f.g.pos]:GT[f.g.pos];return[(b.x+fb*J.H[0])*FVS,(LV.FLOOR+J.H[1])*FVS]}
@@ -332,6 +350,7 @@ class LiveView{
       else{const left=mid-LV.L,right=LV.R-mid,side=right>left?1:-1;tx=mid+side*26;face=-side}}
     tx=clamp(tx,LV.L+2,LV.R-2);const dx=tx-r.x;r.vx=clamp(dx*3,-40,40);r.x+=r.vx*dt;r.face=face||(dx>0?1:-1);r.walkT=(r.walkT||0)+(Math.abs(r.vx)>3?dt:0);r.pose=pose}
   showBanner(t,sub,d){this.ui.ban.innerHTML=`<span>${t}</span>${sub?`<small>${esc(sub)}</small>`:''}`;this.ui.ban.classList.remove('on');void this.ui.ban.offsetWidth;this.ui.ban.classList.add('on');clearTimeout(this.bt);this.bt=setTimeout(()=>this.ui.ban.classList.remove('on'),(d||1.4)*1000)}
+  showCombo(n){const el=this.q('.lcombo');if(!el)return;el.innerHTML=`<b>${n}</b><span>hit combo</span>`;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');clearTimeout(this.cbT);this.cbT=setTimeout(()=>el.classList.remove('on'),900)}
   showFlash(t){this.ui.fl.textContent=t;this.ui.fl.classList.add('on');clearTimeout(this.ft);this.ft=setTimeout(()=>this.ui.fl.classList.remove('on'),900)}
 
   /* ---------- drawing ---------- */
@@ -379,6 +398,17 @@ class LiveView{
       for(let i=1;i<=4;i++){const t=1-i*.22,px=(F.x+F.face*(C[0]+(X[0]-C[0])*t))*FVS,py=(LV.FLOOR+C[1]+(X[1]-C[1])*t)*FVS;x.globalAlpha=.42-i*.08;prect(x,px-3,py-3,7,7,'#fff6d0')}x.globalAlpha=1}
     figure(x,J,F.x,F.face,F.look,{lying:F.down>0,build:F.build,flash:F.flashT>0,hurt:F.hurt>0||F.stag>0,ko:F.down>0&&(F.lost||F.head<20),dmg:1-F.headMax/100+(F.head<35?.25:0)});
     if(F.stag>0&&F.down<=0){const h=J.H,t=f.T;for(let i=0;i<3;i++){const an=t*6+i*2.1;prect(x,(F.x+F.face*h[0]+Math.cos(an)*6)*FVS,(LV.FLOOR+h[1]-8+Math.sin(an)*1.5)*FVS,2,2,i?'#ffe066':'#fff')}}}
+  groundPoses(){const f=this.f,g=f.g,b=g.bot,t=g.top,pos=g.pos;let JB=GB[pos],JT=GT[pos];
+    const jig=f.ct?Math.sin(f.T*35)*.6:0;
+    const strike=(F,J,target)=>{const a=F.act;if(!a||!['gnp','hgnp','bstrike'].includes(a.k))return J;const e=a.ph==='w'?-.3*ease(a.t/a.dw):a.ph==='a'?1:1-ease(a.t/a.dr);
+      if(e<0)return ov(J,{Hf:[J.Hf[0]+2,J.Hf[1]-3],Ef:[J.Ef[0]+1,J.Ef[1]-3]});
+      return ov(J,{Hf:[J.Hf[0]+(target[0]-J.Hf[0])*e,J.Hf[1]+(target[1]-J.Hf[1])*e],Ef:[J.Ef[0]+(target[0]-J.Ef[0])*e*.5,J.Ef[1]+(target[1]-J.Ef[1])*e*.4-1]})};
+    if(b.block&&pos!=='back')JB=ov(JB,{Hf:[JB.H[0]+2,JB.H[1]-3],Hb:[JB.H[0]+1,JB.H[1]-2],Ef:[JB.H[0]+5,JB.H[1]-4],Eb:[JB.H[0]+4,JB.H[1]-2]});
+    JT=strike(t,JT,JB.H);JB=strike(b,JB,JT.H);
+    const sh=k=>{const o={};for(const q of PJ)o[q]=[k[q][0]+jig,k[q][1]];return o};
+    const isSub=!!(f.ct&&f.ct.kind==='sub');
+    for(const F of [b,t])if(F.flashT>0)F.flashT-=1/60;
+    return{JB:sh(JB),JT:isSub?sh(JT):JT,isSub}}
   drawGround(x){const f=this.f,g=f.g,b=g.bot,t=g.top,fb=b.face,pos=g.pos;let JB=GB[pos],JT=GT[pos];
     const jig=f.ct?Math.sin(f.T*35)*.6:0;
     const strike=(F,J,target)=>{const a=F.act;if(!a||!['gnp','hgnp','bstrike'].includes(a.k))return J;const e=a.ph==='w'?-.3*ease(a.t/a.dw):a.ph==='a'?1:1-ease(a.t/a.dr);
@@ -397,6 +427,7 @@ class LiveView{
   hud(dt){const f=this.f,u=this.ui;
     f.F.forEach((F,i)=>{const hp=Math.max(0,F.head);this.ghost[i]=Math.max(hp,this.ghost[i]-dt*22);
       u.hp[i].style.width=hp+'%';u.gh[i].style.width=this.ghost[i]+'%';u.mx[i].style.width=Math.max(0,F.headMax)+'%';u.st[i].style.width=Math.max(0,F.sta)+'%';
+      if(this.mo[i]){this.mo[i].style.width=(F.fire>0?100:F.mo||0)+'%';u.fs[i].classList.toggle('fire',F.fire>0)}
       u.fs[i].classList.toggle('low',hp<30);u.fs[i].classList.toggle('gas',F.sta<30);
       const col=v=>v>66?'#5cc188':v>33?'#f2a43c':'#ec6450',parts=u.body[i].children;parts[0].style.fill=col(F.head);parts[1].style.fill=col(F.body);parts[2].style.fill=col(F.legs)});
     const cl=Math.max(0,f.clock);u.tm.textContent=`${Math.floor(cl/60)}:${String(Math.floor(cl%60)).padStart(2,'0')}`;
@@ -414,7 +445,8 @@ class LiveView{
       if(O.down>0){lab.J=['Pounce',''];lab.P=['Pounce',''];lab.S=['Pounce',''];lab.K=f.ring?['Soccer kick','']:['—',''];lab.B=['Block','']}
       else if(f.fhl&&f.fhl.side===H.side&&gap<16){lab.J=['Jab','counter'];lab.P=['Choke','hold: guillotine'];lab.K=['Knee',''];lab.S=['Go behind','take the back'];lab.B=['Block','']}
       else{const kk=O.act&&O.act.m.kick&&O.act.ph!=='r'&&gap<=O.act.m.rng+3,op=O.open>0;
-        lab.J=['Jab',op?'he\'s open!':''];lab.P=['Power',op?'he\'s open!':'hold: overhand'];lab.K=['Kick','hold: head'];lab.S=kk?['Catch','the kick']:gap<12?['Clinch','']:['Shoot','takedown'];lab.B=['Block',f.sprawlW&&f.sprawlW.side===H.side?'Sprawl now!':'tap: sprawl']}}
+        const rel=Math.sign(f.inp.dir)*H.face;
+        lab.J=['Jab',op?'he\'s open!':''];lab.P=rel<0?['Body','hook']:['Power',op?'he\'s open!':rel>0?'hold: superman':'hold: overhand'];lab.K=rel>0?['Body kick','hold: spin']:rel<0?['Teep','push kick']:['Kick','hold: head'];lab.S=kk?['Catch','the kick']:gap<12?['Clinch','']:['Shoot','takedown'];lab.B=['Block',f.sprawlW&&f.sprawlW.side===H.side?'Sprawl now!':'tap: sprawl']}}
     else if(f.pos==='clinch'){lab.J=['Punches',''];lab.P=['Knee',''];lab.K=['Trip',''];lab.S=['Body lock',''];lab.B=['Break','']}
     else{const g=f.g,top=g.top===H,gp=g.pos;
       if(top){lab.J=['Punch',''];lab.P=['Elbow',''];lab.K=gp==='guard'?['—','pass first']:['Submit',''];lab.S=gp==='back'?['—','']:['Advance',(GPN[GPOS[GPOS.indexOf(gp)+1]]||'').replace(' control','').replace('full ','')];lab.B=['Posture','move: stand up']}
@@ -429,8 +461,8 @@ class LiveView{
   overlay(kind){const u=this.ui.over,f=this.f;this.over=kind;u.hidden=!kind;if(!kind){u.innerHTML='';return}
     const H=f.human,side=H?H.side:0,[A,B]=f.F;
     const row=(l,a,b)=>`<span class="l">${a}</span><span class="c">${l}</span><span>${b}</span>`;
-    if(kind==='pause')u.innerHTML=`<h2>Paused</h2><div class="list"><button class="mrow" data-lv="resume">${svg(PLAYI)}<span>Resume</span></button><button class="mrow" data-lv="help">${svg(BOOKI)}<span>Controls</span></button><button class="mrow" data-lv="sound">${svg('<path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/>')}<span>Sound: ${SFX.on?'On':'Off'}</span></button>${H?`<button class="mrow" data-lv="swap">${svg(ICO.swap)}<span>Buttons on the ${this.swap?'left':'right'}</span></button>`:''}<button class="mrow" data-lv="simrest">${svg('<path d="M5 5l7 7-7 7M12 5l7 7-7 7"/>')}<span>Simulate the rest</span></button>${this.o.canQuit?`<button class="mrow danger" data-lv="quit">${svg(XI)}<span>Quit fight</span></button>`:''}</div>`;
-    else if(kind==='help')u.innerHTML=`<h2>Controls</h2><div class="howto lhelp"><div><h4>Standing</h4><ul><li>Drag the <b>thumbstick</b> left or right to move. Flick away twice quickly to dodge.</li><li><b>Jab</b> is fast. <b>Power</b> throws the cross and hook. Hold it for an overhand.</li><li><b>Kick</b> attacks the legs. Hold it for a head kick.</li><li><b>Block</b> holds your guard and checks leg kicks. Tap it when he shoots to sprawl.</li><li><b>Shoot</b> is a takedown from range, or a clinch up close.</li></ul><h4>Counters</h4><ul><li><b>Parry:</b> raise Block right as a punch lands. He's left open, so hit back hard.</li><li><b>Catch kick:</b> tap Shoot as his kick comes in to catch it and dump him.</li><li><b>Counter knee:</b> throw Power or a knee as he shoots to stop the takedown cold.</li><li><b>After a sprawl:</b> Shoot to go behind, or hold Power for a guillotine (if it fails, you land on your back).</li></ul></div><div><h4>Clinch and ground</h4><ul><li>The buttons change with the position. Read their labels.</li><li>On top: punch, elbow, advance position, submit. Move the stick to stand up.</li><li>On bottom: defend, sweep or escape, get up, submit from guard. From side control you can wall-walk up.</li><li>Every failed attempt and every blocked shot wears him down. Keep scrambling. Explode while he loads up an elbow for a big bonus.</li><li>Stall on top and the referee stands you up. Keep working.</li><li>Scrambles and submissions are tap battles: <b>tap the glowing pad fast</b>.</li></ul></div><p class="hint">Keyboard: A/D move, Space block, J jab, K power, L kick, I shoot, P pause.</p></div><button class="btn block" data-lv="pause">Back</button>`;
+    if(kind==='pause')u.innerHTML=`<h2>Paused</h2><div class="list"><button class="mrow" data-lv="resume">${svg(PLAYI)}<span>Resume</span></button><button class="mrow" data-lv="help">${svg(BOOKI)}<span>Controls</span></button><button class="mrow" data-lv="sound">${svg('<path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/>')}<span>Sound: ${SFX.on?'On':'Off'}</span></button>${H?`<button class="mrow" data-lv="swap">${svg(ICO.swap)}<span>Buttons on the ${this.swap?'left':'right'}</span></button>`:''}<button class="mrow" data-lv="gfx">${svg('<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>')}<span>Graphics: ${this.r3?'3D':'Classic 2D'}</span></button><button class="mrow" data-lv="simrest">${svg('<path d="M5 5l7 7-7 7M12 5l7 7-7 7"/>')}<span>Simulate the rest</span></button>${this.o.canQuit?`<button class="mrow danger" data-lv="quit">${svg(XI)}<span>Quit fight</span></button>`:''}</div>`;
+    else if(kind==='help')u.innerHTML=`<h2>Controls</h2><div class="howto lhelp"><div><h4>Standing</h4><ul><li>Drag the <b>thumbstick</b> left or right to move. Flick away twice quickly to dodge.</li><li><b>Jab</b> is fast. <b>Power</b> throws the cross and hook. Hold it for an overhand.</li><li><b>Kick</b> attacks the legs. Hold it for a head kick.</li><li><b>Block</b> holds your guard and checks leg kicks. Tap it when he shoots to sprawl.</li><li><b>Shoot</b> is a takedown from range, or a clinch up close.</li><li><b>Combos:</b> press the next strike as the last one lands to flow into it faster. Uppercuts come in up close.</li><li><b>Stick + strike:</b> back + Power is a body hook, forward + hold Power a superman punch. Forward + Kick is a body kick, back + Kick a teep, forward + hold Kick a spinning back kick. Spinning and flying moves leave you open if they miss.</li><li>Double-tap toward him to dash in. Land clean shots to fill your <b>momentum</b> bar. When it's full you're on fire: faster, harder hands for a few seconds.</li></ul><h4>Counters</h4><ul><li><b>Parry:</b> raise Block right as a punch lands. He's left open, so hit back hard.</li><li><b>Catch kick:</b> tap Shoot as his kick comes in to catch it and dump him.</li><li><b>Counter knee:</b> throw Power or a knee as he shoots to stop the takedown cold.</li><li><b>After a sprawl:</b> Shoot to go behind, or hold Power for a guillotine (if it fails, you land on your back).</li></ul></div><div><h4>Clinch and ground</h4><ul><li>The buttons change with the position. Read their labels.</li><li>On top: punch, elbow, advance position, submit. Move the stick to stand up.</li><li>On bottom: defend, sweep or escape, get up, submit from guard. From side control you can wall-walk up.</li><li>Every failed attempt and every blocked shot wears him down. Keep scrambling. Explode while he loads up an elbow for a big bonus.</li><li>Stall on top and the referee stands you up. Keep working.</li><li>Scrambles and submissions are tap battles: <b>tap the glowing pad fast</b>.</li></ul></div><p class="hint">Keyboard: A/D move, Space block, J jab, K power, L kick, I shoot, P pause.</p></div><button class="btn block" data-lv="pause">Back</button>`;
     else if(kind==='break'){const r=f.round,st=f.rstats[r-1],pv=f.rstats[r-2],d=(i,k)=>st[i][k]-(pv?pv[i][k]:0),adv=H?f.advice(side):[];
       u.innerHTML=`<div class="lbl">End of round ${r} of ${f.rounds.length}</div><h2>Your corner</h2>
         <div class="tape num">${row('',`<b style="color:#e8574b">${esc(A.name)}</b>`,`<b style="color:#6b95ea">${esc(B.name)}</b>`)}${row('Landed',d(0,'landed'),d(1,'landed'))}${row('Takedowns',d(0,'td'),d(1,'td'))}${row('Knockdowns',d(0,'kd'),d(1,'kd'))}</div>

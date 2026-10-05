@@ -9,6 +9,8 @@ The whole game runs in the browser with no build step and no server. It installs
 ### Hands-on fights
 Every fight can be played live in a side-on pixel-art arena:
 - **Striking:** jab, cross/hook combos, overhand, leg kicks and head kicks, blocking, checking kicks, and dodging.
+- **3D arenas:** low-poly, N64-style fighters, octagons, the RYUJIN ring and a regional gym, with a broadcast camera that swings in on big shots and knockdowns (Three.js, bundled in `js/vendor`). A Classic 2D pixel-art mode is in the pause menu.
+- **Dynamic striking:** combos that flow faster when you chain them, uppercuts up close, body hooks and body kicks, teeps, a superman punch and a spinning back kick (risky if they miss), dash-ins, knockback against the fence, rocked states, and a momentum meter that puts you on fire.
 - **Counters:** parries (block right as a punch lands), catch kicks, counter knees into a shot, and front-headlock follow-ups after a sprawl (go behind or guillotine).
 - **Damage that matters:** separate head, body and leg damage, stamina, knockdowns, and wobbled fighters.
 - **Grappling:** clinch work, takedowns and sprawls, five ground positions (guard, half guard, side control, mount, back), ground and pound, sweeps, escapes, and submissions decided by tap battles. Bottom fighters build scramble momentum, can wall-walk up from side control, and the referee stands up stalling fighters, so a takedown is a phase of the fight, not the end of it.
@@ -42,11 +44,11 @@ Both modes share a **News** tab with headlines, media grades and fan reactions t
 
 | Touch | Keyboard | Standing | Clinch | Ground (top / bottom) |
 |---|---|---|---|---|
-| ◀ ▶ | A / D | Move (double-tap away to dodge) | | Hold to stand up / — |
+| ◀ ▶ | A / D | Move (double-tap away to dodge, toward to dash in) | | Hold to stand up / — |
 | Block | Space | Guard up, check kicks, tap to sprawl, time it to parry | Break | Posture / Defend |
 | Jab | J | Jab | Short punches | Punch / Strike |
-| Power | K | Cross and hook (hold: overhand) | Knee | Elbow / Submit (guard) |
-| Kick | L | Leg kick (hold: head kick) | Trip | Submit / Get up (wall-walk from side) |
+| Power | K | Cross, hook, uppercut up close (hold: overhand; back: body hook; forward + hold: superman) | Knee | Elbow / Submit (guard) |
+| Kick | L | Leg kick (hold: head kick; forward: body kick; back: teep; forward + hold: spinning back kick) | Trip | Submit / Get up (wall-walk from side) |
 | Shoot | I | Takedown (up close: clinch; as a kick comes in: catch it; after a sprawl: go behind) | Body lock | Advance / Sweep or escape |
 
 Scrambles and submissions are tap battles: tap any button as fast as you can. Press P or the pause button for help mid-fight.
