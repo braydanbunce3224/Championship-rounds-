@@ -21,9 +21,9 @@ const fk=k=>k>=1000?`$${(k/1000).toFixed(2)}M`:`$${k}K`;
 const ml=p=>{p=clamp(p,.03,.97);return p>=.5?`−${Math.round(p/(1-p)*100)}`:`+${Math.round((1-p)/p*100)}`};
 
 /* ============ world constants ============ */
-const DIVS=['LW','WW','MW','LHW','HW'];
-const DIVN={LW:'Lightweight',WW:'Welterweight',MW:'Middleweight',LHW:'Light Heavyweight',HW:'Heavyweight'};
-const DIVLB={LW:155,WW:170,MW:185,LHW:205,HW:265};
+const DIVS=['FW','LW','WW','MW','LHW','HW'];
+const DIVN={FW:'Featherweight',LW:'Lightweight',WW:'Welterweight',MW:'Middleweight',LHW:'Light Heavyweight',HW:'Heavyweight'};
+const DIVLB={FW:145,LW:155,WW:170,MW:185,LHW:205,HW:265};
 const PROMOS={
   TFC:{id:'TFC',name:'Titan Fighting Championship',short:'TFC',ring:false,tv:2.6,start:212,prestige:82,color:'#e9b53c',
     tag:'The biggest stage in the sport. Rankings decide everything, five-round title fights, and a pay-per-view machine that needs feeding.',
@@ -209,6 +209,23 @@ function genFighter(promo,div,tier,pool,styleW,ageOverride){
   return f;
 }
 
+/* ---- hand-made fighters that appear in every new world ---- */
+const SIGNATURE=[{first:'Eric',last:'Duncle',nick:'The Machine',nat:'USA',age:28,div:'FW',style:'Wrestler',persona:'Stoic',promo:'TFC',
+  r:{str:80,pow:74,wre:86,grp:79,car:94,chn:82},w:18,l:2,d:0,ko:5,sub:4,streak:6,pop:74}];
+function addSignature(){for(const t of SIGNATURE){if(Object.values(S.F).some(f=>f.first===t.first&&f.last===t.last))continue;
+  const f=genFighter(t.promo,t.div,75,{USA:1},[t.style]);
+  Object.assign(f,{first:t.first,last:t.last,nick:t.nick,nat:t.nat,age:t.age,style:t.style,persona:t.persona,r:{...t.r},w:t.w,l:t.l,d:t.d,ko:t.ko,sub:t.sub,streak:t.streak,pop:t.pop,morale:85,pot:Math.max(ovrOf(t.r),88),avail:1,fights:4});
+  f.ovr=ovrOf(f.r);f.rs=f.ovr+f.pop*.15;f.purse=purseFor(f);NAMES.add(t.first+t.last);S.F[f.id]=f}}
+// older saves were made before the featherweight division existed: give every promotion a featherweight roster and champion
+function migrateSave(){let changed=false;
+  for(const id in PROMOS){if(!S.promos[id])continue;
+    if(!Object.values(S.F).some(f=>f.promo===id&&f.div==='FW')){const per=id===S.pid?16:10,base=id==='TFC'?0:-3;
+      for(let i=0;i<per;i++){const tier=i<3?rnd(80,88)+base:i<8?rnd(69,79)+base:rnd(56,68)+base;const f=genFighter(id,'FW',tier,PROMOS[id].pool,STYLE_W[id]);S.F[f.id]=f}
+      changed=true}}
+  if(!Object.values(S.F).some(f=>f.first==='Eric'&&f.last==='Duncle')){addSignature();changed=true}
+  for(const id in PROMOS){if(!S.promos[id]||S.promos[id].champs.FW)continue;const list=Object.values(S.F).filter(f=>f.promo===id&&f.div==='FW'&&f.id!=='me').sort((a,b)=>b.rs-a.rs);
+    if(list[0]){S.promos[id].champs.FW=list[0].id;list[0].pop=clamp(list[0].pop+14,0,97);list[0].purse=purseFor(list[0]);changed=true}}
+  if(changed){computeRanks();save()}}
 function newGame(pid){
   NAMES=new Set();
   S={v:1,pid,week:1,cash:20,approval:62,nid:1,promos:{},F:{},news:[],inbox:[],iid:1,goal:null,lastPPV:-99,lastGrade:null,events:[],season:{n:1,ev:1,len:6},nextGoal:3};
@@ -221,6 +238,7 @@ function newGame(pid){
   }
   const allPool={};for(const k in NAT)allPool[k]=1;
   for(let i=0;i<14;i++){const f=genFighter('FA',pick(DIVS),rnd(58,80),allPool,STYLE_W.GFL);f.fights=0;S.F[f.id]=f}
+  addSignature();
   for(const id in PROMOS)for(const div of DIVS){
     const list=Object.values(S.F).filter(f=>f.promo===id&&f.div===div).sort((a,b)=>b.rs-a.rs);
     const c=list[0];S.promos[id].champs[div]=c.id;c.pop=clamp(c.pop+14,0,97);c.streak=Math.max(c.streak,3);c.purse=purseFor(c);
@@ -875,7 +893,7 @@ function newCareer(cr){
   for(const id in PROMOS)S.promos[id]={prestige:PROMOS[id].prestige,num:PROMOS[id].start,champs:{},last:null};
   for(const id in PROMOS)for(const div of DIVS)for(let i=0;i<17;i++){const base=id==='TFC'?0:-3;
     const tier=i<3?rnd(80,88)+base:i<8?rnd(69,79)+base:rnd(57,68)+base;const f=genFighter(id,div,tier,PROMOS[id].pool,STYLE_W[id]);S.F[f.id]=f}
-  setupChamps();
+  addSignature();setupChamps();
   const r=crRatings(cr);
   const me={id:'me',first:cr.first.trim()||'Rookie',last:cr.last.trim()||'Prospect',nick:cr.nick.trim(),nat:cr.nat,age:21,div:cr.div,style:cr.style,persona:cr.persona,r,ovr:ovrOf(r),pot:99,
     w:0,l:0,d:0,ko:0,sub:0,streak:0,pop:6,morale:80,promo:'REG',fights:0,purse:4,avail:1,rs:0,pts:0,hist:[],rivals:[],callout:null,expiring:null,promised:false};
@@ -1352,5 +1370,5 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(
   if(CH[a])CH[a](t,v);else if(H[a])H[a]()});
 
 /* ============ boot ============ */
-function start(data){S=(data&&data.S)||load();if(S){for(const f of Object.values(S.F))NAMES.add(f.first+f.last)}render();try{document.fonts&&document.fonts.ready.then(()=>{if(!MGS)fitNames(document)})}catch(e){}}
+function start(data){S=(data&&data.S)||load();if(S){for(const f of Object.values(S.F))NAMES.add(f.first+f.last);try{migrateSave()}catch(e){}}render();try{document.fonts&&document.fonts.ready.then(()=>{if(!MGS)fitNames(document)})}catch(e){}}
 if(typeof document!=='undefined'&&document.getElementById('app'))start({});

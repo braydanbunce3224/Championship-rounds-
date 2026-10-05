@@ -94,7 +94,7 @@ const GT={
   back:{H:[-1,-20],N:[-2,-16],P:[-4,-6],Eb:[0,-14],Hb:[3,-16],Ef:[1,-13],Hf:[3,-15],Kb:[1,-7],Fb:[5,-5],Kf:[2,-6],Ff:[6,-4]}};
 function mixP(a,b,t){t=clamp(t,0,1);const o={};for(const k of PJ){const p=a[k],q=b[k]||p;o[k]=[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]}return o}
 const ease=t=>{t=clamp(t,0,1);return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2};
-const BUILD={LW:.92,WW:.97,MW:1,LHW:1.06,HW:1.14};
+const BUILD={FW:.88,LW:.92,WW:.97,MW:1,LHW:1.06,HW:1.14};
 const OUT='#120d0b';
 
 /* ---------------- arena backgrounds ---------------- */
