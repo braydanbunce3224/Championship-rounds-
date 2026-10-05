@@ -419,3 +419,10 @@ input[type=text]::placeholder{color:var(--faint)}
 .lcombo span{font-size:13px;font-weight:800;letter-spacing:.08em}
 .lcombo.on{animation:lcombo .9s ease-out forwards}
 @keyframes lcombo{0%{opacity:0;transform:scale(1.6)}15%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-10px) scale(.95)}}
+
+/* 2D joystick for moving around the cage */
+.lstick{height:auto;width:min(100%,clamp(112px,21vh,156px));aspect-ratio:1;border-radius:50%;align-self:center;flex:none}
+.larr.u,.larr.d{left:50%;top:auto;transform:translateX(-50%)}.larr.u{top:8px}.larr.d{bottom:8px}
+.larr.l,.larr.r{top:50%;transform:translateY(-50%)}
+.lknob{transition:transform .06s linear}
+@media (max-height:620px){.lstick{width:min(100%,104px)}.lleft{gap:8px}}

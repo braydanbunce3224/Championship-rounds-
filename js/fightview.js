@@ -145,6 +145,63 @@ function buildCrowd(kind){const reg=kind==='REG',rr=seeded(hash(kind,'crowd')),l
       if(!reg&&rr()<.025){const sc=pick(['#e1ad3a','#c8202c','#3a6fd8','#f1e9dc']);prect(L,xx-1,yo-5,9,5,sc);prect(L,xx+1,yo-4,5,1,'#222')}}}
   const out=layers.map(l=>l[0]);out.arms=arms.map(a=>a[0]);return out}
 function buildVignette(){const [c,x]=mkCanvas(FVW,FVH);const g=x.createRadialGradient(FVW/2,FVH*.55,FVH*.35,FVW/2,FVH*.55,FVW*.72);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.55)');x.fillStyle=g;x.fillRect(0,0,FVW,FVH);return c}
+/* ---- broadcast camera: SNES "Mode 7" floor, panoramic crowd, cage walls ---- */
+const CAM={DC:92,HC:78,FOC:184,H0:-16,NEAR:6,PW:756};
+function matTex7(kind,ring,armsUp){const TS=512,[c,x]=mkCanvas(TS,TS),pal=arenaPal(kind),reg=kind==='REG',R=cageR(ring),S=2,cx=TS/2,rr=seeded(hash(kind,'seats'));
+  x.fillStyle=reg?'#2a221d':'#121117';x.fillRect(0,0,TS,TS);
+  // floor tiles outside the fence
+  for(let yy=0;yy<TS;yy+=16)for(let xx=0;xx<TS;xx+=16){x.fillStyle=((xx+yy)/16)%2?(reg?'#30271f':'#16151b'):(reg?'#2a221b':'#121117');x.fillRect(xx,yy,16,16)}
+  const poly=(r)=>{const N=cageN(ring),n=N.length,pts=[];for(let i=0;i<n;i++){const a=Math.atan2(N[i][1],N[i][0])+Math.PI/n,r2=r/Math.cos(Math.PI/n);pts.push([cx+Math.cos(a)*r2*S,cx+Math.sin(a)*r2*S])}return pts};
+  const fillPoly=(pts,col)=>{x.fillStyle=col;x.beginPath();pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.fill()};
+  // tiered seating around the cage (an octagon of rows for the cage, a square for the ring), packed with fans
+  const skins=['#d9b392','#b98a64','#8f6446','#6b4630','#e6c3a3'],shirts=['#4a3a40','#35404e','#55463a','#363636','#5a4646','#33473e','#46405a','#5f4f40','#7a3030','#2e4a7a','#6a5a50'];
+  if(!reg){const tiers=11;for(let t=tiers;t>=0;t--){const r0=R+18+t*7.5;fillPoly(poly(r0),t%2?'#1d1b22':'#24212a')}
+    fillPoly(poly(R+17),'#0e0d12');fillPoly(poly(R+12),'#17161c');
+    for(let t=0;t<11;t++){const r0=R+20+t*7.5,dim=1-t*.05,N=cageN(ring),n=N.length;
+      for(let i=0;i<n;i++){const a0=Math.atan2(N[i][1],N[i][0])+Math.PI/n,a1=Math.atan2(N[(i+1)%n][1],N[(i+1)%n][0])+Math.PI/n,r2=r0/Math.cos(Math.PI/n);
+        const A=[cx+Math.cos(a0)*r2*S,cx+Math.sin(a0)*r2*S],B=[cx+Math.cos(a1)*r2*S,cx+Math.sin(a1)*r2*S],L=Math.hypot(B[0]-A[0],B[1]-A[1]),cnt=Math.floor(L/7);
+        const ox=Math.cos((a0+a1)/2)*S*3,oy=Math.sin((a0+a1)/2)*S*3;
+        for(let j=0;j<cnt;j++){if(rr()<.1)continue;const u=(j+.5)/cnt,px=A[0]+(B[0]-A[0])*u+ox,py=A[1]+(B[1]-A[1])*u+oy;
+          x.fillStyle=shade(pick(shirts),-(1-dim));x.fillRect(px-3,py-3,6,6);x.fillStyle=shade(pick(skins),-(1-dim)*.8);x.fillRect(px-2,py-2,4,4);
+          if(rr()<.3){x.fillStyle='#2a1d14';x.fillRect(px-2,py-2,4,2)}
+          if(armsUp&&rr()<.55){x.fillStyle=shade(pick(skins),-(1-dim)*.8);const ax=Math.cos((a0+a1)/2+1.57)*4,ay=Math.sin((a0+a1)/2+1.57)*4;x.fillRect(px+ax-1,py+ay-1,2,2);x.fillRect(px-ax-1,py-ay-1,2,2)}
+          if(!armsUp&&rr()<.025){x.fillStyle=pick([pal.acc,'#c8202c','#3a6fd8','#f1e9dc']);x.fillRect(px-4,py-4,8,4)}}}}
+    // aisles
+    const N=cageN(ring);x.strokeStyle='#0c0b10';x.lineWidth=5;for(let i=0;i<N.length;i++){const a=Math.atan2(N[i][1],N[i][0]);x.beginPath();x.moveTo(cx+Math.cos(a)*(R+17)*S,cx+Math.sin(a)*(R+17)*S);x.lineTo(cx+Math.cos(a)*TS,cx+Math.sin(a)*TS);x.stroke()}}
+  else{for(let i=0;i<14;i++){const bx=rr()*TS,by=rr()*TS;if(Math.hypot(bx-cx,by-cx)<(R+16)*S)continue;x.fillStyle='#8c1f1a';x.beginPath();x.arc(bx,by,7,0,7);x.fill();x.fillStyle='#a8362c';x.beginPath();x.arc(bx-2,by-2,3,0,7);x.fill()}
+    for(let i=0;i<10;i++){const a=rr()*6.28,d=(R+22+rr()*30)*S,px=cx+Math.cos(a)*d,py=cx+Math.sin(a)*d;x.fillStyle=pick(shirts);x.fillRect(px-3,py-3,6,6);x.fillStyle=pick(skins);x.fillRect(px-2,py-2,4,4)}}
+  if(ring){fillPoly(poly(R+8),pal.mat2);fillPoly(poly(R+2),shade(pal.mat2,-.25))}else fillPoly(poly(R+3),'#1a1a20');
+  fillPoly(poly(R),pal.mat);
+  // dithered shading toward the edges, SNES style
+  x.save();x.beginPath();poly(R).forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.clip();
+  for(let yy=0;yy<TS;yy++)for(let xx=(yy%2);xx<TS;xx+=2){const d=Math.hypot(xx-cx,yy-cx)/(R*S);if(d>.8&&((xx*7+yy*13)%7)<(d-.8)*9){x.fillStyle=ring?shade(pal.mat,-.12):pal.mat2;x.fillRect(xx,yy,1,1)}}
+  if(!ring){x.strokeStyle=pal.acc;x.globalAlpha=.6;x.lineWidth=2;x.beginPath();poly(R-5).forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.stroke();x.globalAlpha=1}
+  else{x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=2;x.beginPath();poly(R-4).forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]));x.closePath();x.stroke()}
+  // corner marks
+  for(const s2 of [-1,1]){x.fillStyle=s2<0?'rgba(207,58,46,.55)':'rgba(47,99,200,.55)';x.fillRect(cx+s2*R*S*.62-5,cx-2,10,4)}
+  x.restore();
+  const logo=kind==='EXH'?'':reg?'PGFC':kind==='RYU'?'RYUJIN':kind;
+  if(logo){const sc=logo.length>4?5:7,w=pxW(logo,sc);pxText(x,logo,Math.round(cx-w/2),Math.round(cx-sc*2.5),sc,pal.logo||'rgba(0,0,0,.25)')}
+  const d=x.getImageData(0,0,TS,TS);return{px:new Uint32Array(d.data.buffer),TS,S}}
+function buildPano(kind){const PW=CAM.PW,PH=CAM.H0+10,reg=kind==='REG',rr=seeded(hash(kind,'pano'));
+  const [bc,bx]=mkCanvas(PW,PH),layers=[0,1,2,3].map(()=>mkCanvas(PW,PH)),arms=[0,1,2,3].map(()=>mkCanvas(PW,PH)),pal=arenaPal(kind);
+  const g=bx.createLinearGradient(0,0,0,PH);g.addColorStop(0,'#040406');g.addColorStop(1,reg?'#2a1d17':'#15131b');bx.fillStyle=g;bx.fillRect(0,0,PW,PH);
+  if(reg){for(let yy=4;yy<PH;yy+=6)for(let xx=((yy/6)%2)*8-8;xx<PW;xx+=16){prect(bx,xx,yy,15,5,rr()<.5?'#3a2720':'#43302a');prect(bx,xx,yy,15,1,'#4d382f')}
+    for(let px=30;px<PW;px+=150){const col=rr()<.5?'#c8202c':'#2f63c8';prect(bx,px,14,24,30,col);prect(bx,px+2,16,20,26,shade(col,-.35));pxText(bx,'PGFC',px+1,20,1,'#f1e9dc')}
+    for(let bxx=90;bxx<PW;bxx+=150){prect(bx,bxx+5,0,2,26,'#2a2522');prect(bx,bxx,26,12,30,'#8c1f1a');prect(bx,bxx,26,3,30,'#a8362c')}}
+  else{prect(bx,0,4,PW,3,'#2a2a31');for(let i=0;i<PW;i+=8)pline(bx,i,5,i+8,9,1,'#26262c');
+    for(let lx=12;lx<PW;lx+=42){prect(bx,lx-3,8,6,4,'#3a3a40');prect(bx,lx-2,12,4,1,'#fff6d8')}
+    for(let i=0;i<PW;i+=63){const col=pick([pal.acc,'#c8202c','#3a6fd8','#f1e9dc']);prect(bx,i+8,PH-12,40,6,col);prect(bx,i+10,PH-10,36,2,shade(col,-.4))}}
+  const skins=['#d9b392','#b98a64','#8f6446','#6b4630','#e6c3a3'],cols=['#4a3a40','#35404e','#55463a','#363636','#5a4646','#33473e','#46405a','#5f4f40','#6a5a50','#3d3530'];
+  const y0=reg?PH-22:16,y1=PH-13,rows=Math.max(1,Math.floor((y1-y0)/6));
+  for(let r=0;r<rows;r++){const yy=y0+r*6,dim=.5+.5*(r/rows);
+    for(let xx=-3;xx<PW;xx+=5+Math.floor(rr()*3)){if(rr()<(reg?.55:.1))continue;const li=Math.floor(rr()*4),L=layers[li][1],sh=cols[Math.floor(rr()*cols.length)],sk=skins[Math.floor(rr()*skins.length)];
+      const yo=yy+Math.floor(rr()*2);prect(L,xx,yo+4,5,4,shade(sh,-(1-dim)));prect(L,xx+1,yo,3,4,shade(sk,-(1-dim)*.9));prect(L,xx+1,yo,1,4,shade(sk,-(1-dim)*.9-.15));
+      if(rr()<.25)prect(L,xx+1,yo,3,1,shade('#2a1d14',-(1-dim)));if(rr()<.05)prect(L,xx+3,yo+1,2,2,'#c9e3ff');
+      if(rr()<.55){const A=arms[li][1],ac=shade(sk,-(1-dim)*.9),up=rr()<.5;prect(A,xx-1,yo-(up?3:1),1,up?6:4,ac);prect(A,xx+5,yo-(up?3:1),1,up?6:4,ac)}}}
+  prect(bx,0,PH-7,PW,7,reg?'#1f1814':'#0d0c10');prect(bx,0,PH-7,PW,1,pal.acc);
+  return{bg:bc,layers:layers.map(l=>l[0]),arms:arms.map(a=>a[0]),PH}}
+function meshPat(x){const [c,m]=mkCanvas(6,6);m.fillStyle='rgba(176,184,198,.85)';for(let i=0;i<6;i++){m.fillRect(i,i,1,1);m.fillRect(5-i,i,1,1)}return x.createPattern(c,'repeat')}
 function drawRopes(x,kind){const cols=kind==='RYU'?['#efe9de','#d02a34','#efe9de']:['#efe9de','#d33a3a','#3a62c0'];
   [FVY-68,FVY-50,FVY-32].forEach((y,i)=>{prect(x,14,y,FVW-28,3,cols[i]);prect(x,14,y,FVW-28,1,shade(cols[i],.35));prect(x,14,y+3,FVW-28,2,'rgba(0,0,0,.35)')})}
 
@@ -234,10 +291,12 @@ const ICO={
 const LBLICO={Jab:'fist',Punches:'fist',Punch:'fist',Strike:'fist',Power:'power',Elbow:'power',Knee:'knee',Kick:'kick',Trip:'kick','Soccer kick':'kick',Shoot:'shoot',Clinch:'shoot','Body lock':'shoot',Pounce:'shoot',Advance:'up',Body:'power','Body kick':'kick',Teep:'kick','Get up':'up','Go behind':'up',Choke:'lock',Catch:'shoot',Sweep:'swap',Escape:'swap',Submit:'lock',Block:'shield',Break:'shield',Posture:'shield',Defend:'shield'};
 class LiveView{
   constructor(host,o){this.o=o;this.f=new LiveFight(o);this.speed=1;this.acc=0;this.last=0;this.parts=[];this.decals=[];this.stop=0;this.zoom=1;this.hype=0;this.ghost=[100,100];this.over=null;
-    this.kind=o.arena||'EXH';this.bg=buildBg(this.kind,o.ring);this.crowd=buildCrowd(this.kind);this.vig=buildVignette();[this.buf,this.bx]=mkCanvas(FVW,FVH);
+    this.kind=o.arena||'EXH';this.vig=buildVignette();[this.buf,this.bx]=mkCanvas(FVW,FVH);
+    this.mat=matTex7(this.kind,!!o.ring,false);this.matUp=this.kind==='REG'?this.mat:matTex7(this.kind,!!o.ring,true);this.pano=buildPano(this.kind);this.mesh=meshPat(this.bx);this.floorImg=this.bx.createImageData(FVW,FVH);this.floor32=new Uint32Array(this.floorImg.data.buffer);
+    this.cam={mx:0,my:0,th:0};this.decalW=[];
     this.hold={};this.backTap=0;this.stick={id:null,dir:0};this.swap=lsGetV('cr.swap')==='1';
     const [A,B]=this.f.F;for(const F of this.f.F){F.build=BUILD[F.f.div]||1}
-    this.ref={x:LV.W/2,look:lookOf({id:'ref'+(o.a.id||'')},0),pose:PO.ref};
+    this.ref={x:0,y:-26,vx:0,look:lookOf({id:'ref'+(o.a.id||'')},0),pose:PO.ref,face:1};
     host.insertAdjacentHTML('beforeend',`<div class="live${this.swap?' swap':''}" id="live" role="application" aria-label="Live fight">
       <div class="lhud">${[A,B].map((F,i)=>this.plate(F,i)).join('')}</div>
       <div class="lstage"><canvas width="${FVW}" height="${FVH}"></canvas><div class="lban"></div><div class="lflash"></div><div class="lcombo"></div>
@@ -261,7 +320,7 @@ class LiveView{
       <svg class="lbody" viewBox="0 0 10 22" aria-hidden="true"><circle cx="5" cy="3" r="2.6"/><rect x="2.4" y="6.4" width="5.2" height="7" rx="1.4"/><rect x="2.6" y="13.8" width="4.8" height="7.6" rx="1.2"/></svg></div>
       <div class="lmeta">${esc(F.f.style||'')}${rec?' · '+rec:''}</div></div>`}
   padHTML(){const b=(k,cls,lbl,ico)=>`<button class="lbtn ${cls}" data-k="${k}"><span class="lring"></span><span class="lic">${svg(ICO[ico])}</span><b>${lbl}</b><small></small></button>`;
-    return `<div class="lleft"><div class="lstick" data-stick aria-label="Move: drag left or right"><span class="larr l">${svg('<path d="M15 5l-7 7 7 7"/>')}</span><span class="larr r">${svg('<path d="M9 5l7 7-7 7"/>')}</span><span class="lknob"></span></div>
+    return `<div class="lleft"><div class="lstick" data-stick aria-label="Move: drag in any direction"><span class="larr l">${svg('<path d="M15 5l-7 7 7 7"/>')}</span><span class="larr r">${svg('<path d="M9 5l7 7-7 7"/>')}</span><span class="larr u">${svg('<path d="M5 15l7-7 7 7"/>')}</span><span class="larr d">${svg('<path d="M5 9l7 7 7-7"/>')}</span><span class="lknob"></span></div>
       ${b('B','lblock','Block','shield')}</div>
       <div class="ldia">${b('J','kj','Jab','fist')}${b('S','ks','Shoot','shoot')}${b('P','kp','Power','power')}${b('K','kk','Kick','kick')}</div>`}
   watchHTML(){return `<div class="lwatch"><div class="lbl">Watching live · speed</div><div class="seg">${[1,2,4].map(s=>`<button class="${s===1?'on':''}" data-lv="spd" data-v="${s}">${s}×</button>`).join('')}</div><button class="btn ghost block" data-lv="ffwd">Skip to result</button></div>`}
@@ -279,27 +338,33 @@ class LiveView{
     this.onClick=e=>{const b=e.target.closest('[data-lv]');if(!b)return;SFX.init();this.cmd(b.dataset.lv,b.dataset.v)};
     el.addEventListener('pointerdown',this.onDown);el.addEventListener('pointermove',this.onMove);el.addEventListener('pointerup',this.onUp);el.addEventListener('pointercancel',this.onUp);el.addEventListener('lostpointercapture',this.onUp);el.addEventListener('click',this.onClick);
     el.addEventListener('contextmenu',e=>e.preventDefault());
-    const KM={ArrowLeft:'L',a:'L',A:'L',ArrowRight:'R',d:'R',D:'R',' ':'B',ArrowDown:'B',s:'B',S:'B',j:'J',J:'J',k:'P',K:'P',l:'K',L:'K',i:'S',I:'S',ArrowUp:'S',w:'S',W:'S'};
+    const KM={ArrowLeft:'L',a:'L',A:'L',ArrowRight:'R',d:'R',D:'R',ArrowUp:'U',w:'U',W:'U',ArrowDown:'D',s:'D',S:'D',' ':'B',j:'J',J:'J',k:'P',K:'P',l:'K',L:'K',i:'S',I:'S'};
     this.onKey=e=>{if(e.type==='keydown'&&(e.key==='Escape'||e.key==='p')){this.cmd(this.over==='pause'?'resume':'pause');return}
       const k=KM[e.key];if(!k||!this.f.human)return;e.preventDefault();if(e.type==='keydown'){if(e.repeat)return;SFX.init();this.press(k,this.el.querySelector(`[data-k="${k}"]`))}else this.release(k,this.el.querySelector(`[data-k="${k}"]`))};
     document.addEventListener('keydown',this.onKey);document.addEventListener('keyup',this.onKey)}
-  stickDown(e,st){const r=st.getBoundingClientRect();this.stick={id:e.pointerId,cx:r.left+r.width/2,w:r.width,dir:0};try{st.setPointerCapture(e.pointerId)}catch(_){}this.stickMove(e)}
-  stickMove(e){const s=this.stick,dx=e.clientX-s.cx,lim=s.w/2-30;const d=Math.abs(dx)<10?0:Math.sign(dx);
-    if(d!==s.dir){if(d!==0)this.dirStart(d);s.dir=d}if(this.ui.knob)this.ui.knob.style.transform=`translateX(${clamp(dx,-lim,lim)}px)`}
-  stickUp(){this.stick={id:null,dir:0};if(this.ui.knob)this.ui.knob.style.transform=''}
+  stickDown(e,st){const r=st.getBoundingClientRect();this.stick={id:e.pointerId,cx:r.left+r.width/2,cy:r.top+r.height/2,w:r.width,dir:0,mx:0,my:0};try{st.setPointerCapture(e.pointerId)}catch(_){}this.stickMove(e)}
+  stickMove(e){const s=this.stick,lim=Math.max(14,s.w/2-28);let dx=e.clientX-s.cx,dy=e.clientY-s.cy;const m=Math.hypot(dx,dy);
+    if(m>lim){dx*=lim/m;dy*=lim/m}const dead=10;s.mx=m<dead?0:dx/lim;s.my=m<dead?0:dy/lim;
+    const d=Math.abs(s.mx)>.55&&Math.abs(s.mx)>Math.abs(s.my)?Math.sign(s.mx):0;if(d!==s.dir){if(d!==0)this.dirStart(d);s.dir=d}
+    const v=Math.abs(s.my)>.55&&Math.abs(s.my)>Math.abs(s.mx)?Math.sign(s.my):0;if(v!==s.vdir){if(v!==0)this.vStart(v);s.vdir=v}
+    if(this.ui.knob)this.ui.knob.style.transform=`translate(${dx}px,${dy}px)`}
+  stickUp(){this.stick={id:null,dir:0,mx:0,my:0};if(this.ui.knob)this.ui.knob.style.transform=''}
+  vStart(v){const f=this.f,H=f.human;if(!H||this.over||f.ct||f.pos!=='stand')return;const now=performance.now(),k=v<0?'upTap':'dnTap';
+    if(now-(this[k]||0)<300){f.taps.push(v<0?'slipL':'slipR');this[k]=0}else this[k]=now}
   dirStart(d){const f=this.f,H=f.human;if(!H||this.over)return;if(f.ct){f.taps.push(d<0?'L':'R');return}
     if(f.pos!=='stand')return;const now=performance.now();
-    if(d!==H.face){if(now-this.backTap<300){f.taps.push('dodge');this.backTap=0}else this.backTap=now}
+    if(d!==(H.sf||1)){if(now-this.backTap<300){f.taps.push('dodge');this.backTap=0}else this.backTap=now}
     else{if(now-(this.fwdTap||0)<300){f.taps.push('dash');this.fwdTap=0}else this.fwdTap=now}}
   tapZone(e){const f=this.f;if(!f.ct)return;f.taps.push('J');SFX.play('tap');const z=this.ui.tz.querySelector('.ltz');z.classList.remove('hit');void z.offsetWidth;z.classList.add('hit');try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
   press(k,b){const f=this.f,H=f.human;if(!H||this.over)return;b&&b.classList.add('on');
     if(k==='L'||k==='R'){this.hold[k]=true;this.dirStart(k==='L'?-1:1);return}
+    if(k==='U'||k==='D'){this.hold[k]=true;this.vStart(k==='U'?-1:1);return}
     if(k==='B'){this.hold.B=true;f.taps.push('B');return}
     if(f.ct||(k!=='P'&&k!=='K')){f.taps.push(k);return}
     this.hold[k]=performance.now();this.hb=this.hb||{};this.hb[k]=b;
     clearTimeout(this['ct'+k]);this['ct'+k]=setTimeout(()=>{if(this.hold[k]){this.hold[k]=0;b&&b.style.setProperty('--c',0);f.taps.push(k+'c');try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}}},480)}
   release(k,b){b&&b.classList.remove('on');const f=this.f;
-    if(k==='L'||k==='R'||k==='B'){this.hold[k]=false;return}
+    if(k==='L'||k==='R'||k==='U'||k==='D'||k==='B'){this.hold[k]=false;return}
     if((k==='P'||k==='K')&&this.hold[k]){const held=performance.now()-this.hold[k];this.hold[k]=0;clearTimeout(this['ct'+k]);b&&b.style.setProperty('--c',0);f.taps.push(held<220?k:k+'c')}}
   cmd(c,v){const f=this.f;
     if(c==='pause'&&f.phase!=='end'){this.paused=true;this.overlay('pause')}
@@ -319,7 +384,11 @@ class LiveView{
   loop(ts){this.raf=requestAnimationFrame(this.loop);if(!this.el.isConnected){cancelAnimationFrame(this.raf);LIVE_ON=false;return}
     let dt=Math.min(.05,(ts-(this.last||ts))/1000);this.last=ts;const f=this.f;
     if(!this.paused&&!this.over){const H=f.human;
-      f.inp.dir=H?(this.stick.dir||((this.hold.R?1:0)-(this.hold.L?1:0))):0;f.inp.B=!!this.hold.B;
+      {let mx=this.stick.mx||((this.hold.R?1:0)-(this.hold.L?1:0)),my=this.stick.my||((this.hold.D?1:0)-(this.hold.U?1:0));if(!H){mx=my=0}
+        const m=Math.hypot(mx,my);if(m>1){mx/=m;my/=m}const c=this.cam,cr=Math.cos(c.th),sr=Math.sin(c.th);
+        // screen right = camera right, screen up = away from the camera
+        f.inp.dir=mx;f.inp.wx=cr*mx+sr*my;f.inp.wy=sr*mx-cr*my}
+      f.inp.B=!!this.hold.B;
       if(this.stop>0&&!this.ff)this.stop-=dt;
       else{const sp=this.ff?this.speed:this.speed*(f.slow>0?.35:1);this.acc+=dt*sp;let n=0;
         while(this.acc>=1/60&&n<900){f.update(1/60);this.acc-=1/60;n++;this.drain();if(this.stop>0&&!this.ff){this.acc=0;break}}}
@@ -331,17 +400,18 @@ class LiveView{
   onEv(e){const f=this.f,ff=this.ff;if(ff&&e.type!=='banner')return;
     switch(e.type){
       case'hit':{const p=this.hitPos(e),big=e.big;
-        this.parts.push({k:'burst',x:p[0],y:p[1],l:big?.2:.12,m:big?.2:.12,s:big?1:.6,d:-(e.F.face||1)});if(big)this.parts.push({k:'ring',x:p[0],y:p[1],l:.18,m:.18});
-        if(big)this.parts.push({k:'lines',x:p[0],y:p[1],l:.12,m:.12,d:-(e.F.face||1)});
-        for(let i=0;i<(big?10:5);i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*130-e.F.face*40,vy:(Math.random()-.75)*110,l:.2+Math.random()*.2,c:Math.random()<.5?'#fff':'#ffe58a',s:Math.random()<.4?2:1});
-        if(big||Math.random()<.4)for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*80-e.F.face*30,vy:-Math.random()*70,l:.5,c:'#cfe8ff',s:2,g:1});
-        if(e.blood)for(let i=0;i<6;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*90,vy:-Math.random()*60,l:1,c:'#8f1717',s:2,g:1,dec:1});
+        this.parts.push({k:'burst',x:p[0],y:p[1],l:big?.2:.12,m:big?.2:.12,s:big?1:.6,d:-(e.F.sf||1)});if(big)this.parts.push({k:'ring',x:p[0],y:p[1],l:.18,m:.18});
+        if(big)this.parts.push({k:'lines',x:p[0],y:p[1],l:.12,m:.12,d:-(e.F.sf||1)});
+        for(let i=0;i<(big?10:5);i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*130-(e.F.sf||1)*40,vy:(Math.random()-.75)*110,l:.2+Math.random()*.2,c:Math.random()<.5?'#fff':'#ffe58a',s:Math.random()<.4?2:1});
+        if(big||Math.random()<.4)for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*80-(e.F.sf||1)*30,vy:-Math.random()*70,l:.5,c:'#cfe8ff',s:2,g:1});
+        if(e.blood){for(let i=0;i<6;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*90,vy:-Math.random()*60,l:.7,c:'#8f1717',s:2,g:1});
+          if(this.decalW.length<90)for(let i=0;i<3;i++)this.decalW.push([e.F.x+(Math.random()-.5)*8,e.F.y+(Math.random()-.5)*5,Math.random()<.5?2:1])}
         if(big){this.stop=Math.max(this.stop,e.dmg>9?.1:.065);this.hype=Math.min(1,this.hype+.35)}
         e.F.flashT=.07;e.F.snap=.18;e.F.snapBig=big;e.F.snapT=e.tgt||'head';SFX.play('hit',big);if(big&&e.dmg>8)SFX.play('crowd');
         if(f.human&&(e.F===f.human||e.A===f.human))try{navigator.vibrate&&navigator.vibrate(e.F===f.human?(big?30:12):8)}catch(_){}break}
-      case'block':{const p=this.hitPos(e);for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*70-e.F.face*30,vy:(Math.random()-.6)*60,l:.16,c:'#a9b3bd',s:1});this.parts.push({k:'ring',x:p[0],y:p[1],l:.1,m:.1,c:'#a9b3bd'});SFX.play('block');break}
+      case'block':{const p=this.hitPos(e);for(let i=0;i<5;i++)this.parts.push({x:p[0],y:p[1],vx:(Math.random()-.5)*70-(e.F.sf||1)*30,vy:(Math.random()-.6)*60,l:.16,c:'#a9b3bd',s:1});this.parts.push({k:'ring',x:p[0],y:p[1],l:.1,m:.1,c:'#a9b3bd'});SFX.play('block');break}
       case'whoosh':SFX.play('whoosh');break;
-      case'slam':for(let i=0;i<20;i++)this.parts.push({x:e.x*FVS+(Math.random()-.5)*36,y:FVY-2,vx:(Math.random()-.5)*110,vy:-Math.random()*40,l:.6,c:'#d8ccb4',s:Math.random()<.5?3:2,a:1});SFX.play('slam');this.stop=.06;this.hype=Math.min(1,this.hype+.3);break;
+      case'slam':{const P=this.proj(e.F.x,e.F.y,0);for(let i=0;i<20;i++)this.parts.push({x:P[0]+(Math.random()-.5)*36,y:P[1]-2,vx:(Math.random()-.5)*110,vy:-Math.random()*40,l:.6,c:'#d8ccb4',s:Math.random()<.5?3:2,a:1});SFX.play('slam');this.stop=.06;this.hype=Math.min(1,this.hype+.3);break}
       case'kd':this.stop=.16;this.hype=1;SFX.play('slam');SFX.play('crowd',true);break;
       case'bell':SFX.play('bell');break;
       case'crowd':SFX.play('crowd',true);this.hype=1;break;
@@ -352,55 +422,121 @@ class LiveView{
       case'rocked':this.hype=Math.min(1,this.hype+.5);break;
       case'contestEnd':if(e.human!=null)this.showFlash(e.human?'You win the scramble!':'Lost the scramble');break;
     }}
-  hitPos(e){const f=this.f,F=e.F;if(f.pos==='ground'&&f.g){const b=f.g.bot,fb=b.face,J=F===b?GB[f.g.pos]:GT[f.g.pos];return[(b.x+fb*J.H[0])*FVS,(LV.FLOOR+J.H[1])*FVS]}
-    return[(F.x-F.face*1.5)*FVS,(LV.FLOOR+(e.y||-26))*FVS]}
+  hitPos(e){const f=this.f,F=e.F;this.place();if(f.pos==='ground'&&f.g){const b=f.g.bot,fb=f.g.sfb||1,J=F===b?GB[f.g.pos]:GT[f.g.pos];return[b.px+fb*J.H[0]*FVS,b.py+J.H[1]*FVS]}
+    return[F.px-(F.sf||1)*1.5*FVS,F.py+(e.y||-26)*FVS]}
   updParts(dt){for(const p of this.parts){p.l-=dt;if(p.vx!=null){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=(p.g?320:80)*dt;if(p.a)p.vx*=.92}
-      if(p.dec&&p.y>=FVY){p.l=0;if(this.decals.length<90)this.decals.push([Math.round(p.x),FVY+Math.floor(Math.random()*8),Math.random()<.5?2:1])}}
+      }
     this.parts=this.parts.filter(p=>p.l>0)}
-  updRef(dt){const f=this.f,r=this.ref,[a,b]=f.F;let tx,pose=PO.ref,face;
-    if(f.phase==='end'&&f.pt>1){const W=f.F.find(F=>F.win);if(W){tx=W.x-W.face*7;face=W.face;pose=PO.refRaise}else{tx=LV.W/2;pose=PO.ref}}
-    else if(f.pos==='ground'&&f.g){const bx=f.g.bot.x,side=bx<LV.W/2?1:-1;tx=bx+side*24;pose=PO.refCrouch;face=-side}
-    else{const D=f.F.find(F=>F.down>0);const mid=(a.x+b.x)/2;
-      if(D){const side=D.x<LV.W/2?1:-1;tx=D.x+side*14;pose=PO.refStop;face=-side}
-      else{const left=mid-LV.L,right=LV.R-mid,side=right>left?1:-1;tx=mid+side*26;face=-side}}
-    tx=clamp(tx,LV.L+2,LV.R-2);const dx=tx-r.x;r.vx=clamp(dx*3,-40,40);r.x+=r.vx*dt;r.face=face||(dx>0?1:-1);r.walkT=(r.walkT||0)+(Math.abs(r.vx)>3?dt:0);r.pose=pose}
+  // the referee works the far side of the action so he never blocks the camera
+  updRef(dt){const f=this.f,r=this.ref,[a,b]=f.F,c=this.cam,cr=Math.cos(c.th),sr=Math.sin(c.th),kx=-sr,ky=cr;let tx,ty,pose=PO.ref,look=null;
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,side=(r.x-mx)*cr+(r.y-my)*sr>=0?1:-1;
+    if(f.phase==='end'&&f.pt>1){const W=f.F.find(F=>F.win)||a;tx=W.x+kx*5-cr*side*7;ty=W.y+ky*5-sr*side*7;pose=W.win?PO.refRaise:PO.ref;look=W}
+    else if(f.pos==='ground'&&f.g){const B=f.g.bot;tx=B.x+kx*14+cr*side*24;ty=B.y+ky*14+sr*side*24;pose=PO.refCrouch;look=B}
+    else{const D=f.F.find(F=>F.down>0);
+      if(D){tx=D.x+kx*10+cr*side*20;ty=D.y+ky*10+sr*side*20;pose=PO.refStop;look=D}
+      else{tx=mx+kx*12+cr*side*30;ty=my+ky*12+sr*side*30}}
+    const P={x:tx,y:ty};f.clampIn(P,3);const dx=P.x-r.x,dy=P.y-r.y,d=Math.hypot(dx,dy),sp=Math.min(40,d*3);
+    if(d>.01){r.x+=dx/d*sp*dt;r.y+=dy/d*sp*dt}r.vx=sp;r.walkT=(r.walkT||0)+(sp>3?dt:0);r.pose=pose;r.look2=look||{x:mx,y:my}}
   showBanner(t,sub,d){this.ui.ban.innerHTML=`<span>${t}</span>${sub?`<small>${esc(sub)}</small>`:''}`;this.ui.ban.classList.remove('on');void this.ui.ban.offsetWidth;this.ui.ban.classList.add('on');clearTimeout(this.bt);this.bt=setTimeout(()=>this.ui.ban.classList.remove('on'),(d||1.4)*1000)}
   showCombo(n){const el=this.q('.lcombo');if(!el)return;el.innerHTML=`<b>${n}</b><span>hit combo</span>`;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');clearTimeout(this.cbT);this.cbT=setTimeout(()=>el.classList.remove('on'),900)}
   showFlash(t){this.ui.fl.textContent=t;this.ui.fl.classList.add('on');clearTimeout(this.ft);this.ft=setTimeout(()=>this.ui.fl.classList.remove('on'),900)}
 
+  /* ---------- camera ---------- */
+  camUpdate(dt){const f=this.f,c=this.cam,[a,b]=f.F;let tx,ty;
+    if(f.pos==='ground'&&f.g){tx=f.g.bot.x;ty=f.g.bot.y}else{tx=(a.x+b.x)/2;ty=(a.y+b.y)/2}
+    const ax=Math.atan2(f.axis[1],f.axis[0]);let best=ax,bd=9;for(const cand of [ax,ax+Math.PI]){let d=cand-c.th;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)<Math.abs(bd)){bd=d;best=cand}}
+    if(f.pos==='stand'&&!f.F.some(F=>F.down>0))c.th+=bd*Math.min(1,dt*2.6);
+    c.cutCD=(c.cutCD||0)-dt;
+    if(c.cutCD<=0&&c.cr!=null){const kx=-Math.sin(c.th),ky=Math.cos(c.th);let near=0;for(const F of f.F){let m=-1e9;for(const n of f.N){if(n[0]*kx+n[1]*ky<-.3)m=Math.max(m,F.x*n[0]+F.y*n[1])}if(f.CR-m<14)near++}
+      if(near===2){c.th+=Math.PI;c.cutCD=4;this.cut=.12}}
+    const k=Math.min(1,dt*4);c.mx+=(tx-c.mx)*k;c.my+=(ty-c.my)*k;
+    c.cr=Math.cos(c.th);c.sr=Math.sin(c.th);c.cx=c.mx+c.sr*CAM.DC;c.cy=c.my-c.cr*CAM.DC}
+  // world (x,y on the mat, h above it) -> screen pixels; returns [sx,sy,depth]
+  proj(wx,wy,h){const c=this.cam,rx=wx-c.cx,ry=wy-c.cy,xr=rx*c.cr+ry*c.sr,d=-rx*c.sr+ry*c.cr;
+    if(d<.5)return[NaN,NaN,d];return[FVW/2+xr*CAM.FOC/d,CAM.H0+(CAM.HC-(h||0))*CAM.FOC/d,d]}
+  // per-fighter screen anchors (feet) and which way each one faces on screen
+  place(){const f=this.f,c=this.cam;if(c.cr==null)this.camUpdate(0);
+    for(const F of f.F){const P=this.proj(F.x,F.y,0);F.px=Math.round(P[0]);F.py=Math.round(P[1]);F.pd=P[2]}
+    const [a,b]=f.F;const dxs=b.px-a.px;if(Math.abs(dxs)>1){a.sf=dxs>0?1:-1;b.sf=-a.sf}else{a.sf=a.sf||1;b.sf=-(a.sf)}
+    if(f.g){const v=f.g.fx;f.g.sfb=(v[0]*c.cr+v[1]*c.sr)>=0?1:-1}
+    const r=this.ref,P=this.proj(r.x,r.y,0);r.px=Math.round(P[0]);r.py=Math.round(P[1]);r.pd=P[2];
+    const L=r.look2?this.proj(r.look2.x,r.look2.y,0):null;r.sf=L&&L[0]<r.px?-1:1}
+  floor7(sx,sy){const c=this.cam,M=this.hype>.4&&Math.sin(this.vt*14)>0?this.matUp:this.mat,px=M.px,TS=M.TS,S=M.S,out=this.floor32,half=TS/2,dark=0xff0b0a0e;
+    const y0=Math.max(0,Math.ceil(CAM.H0+1+sy));for(let y=0;y<y0;y++)out.fill(0,y*FVW,(y+1)*FVW);
+    for(let y=y0;y<FVH;y++){const d=CAM.HC*CAM.FOC/(y-sy-CAM.H0),step=d/CAM.FOC,fog=Math.max(.35,Math.min(1,1.3-d/420));
+      let wx=c.cx-c.sr*d+c.cr*(-FVW/2-sx)*step,wy=c.cy+c.cr*d+c.sr*(-FVW/2-sx)*step;const dx=c.cr*step,dy=c.sr*step,row=y*FVW;
+      for(let x=0;x<FVW;x++){const tx=(wx*S+half)|0,ty=(wy*S+half)|0;let col=(tx>=0&&ty>=0&&tx<TS&&ty<TS)?px[ty*TS+tx]:dark;
+        if(fog<1){const r=(col&255)*fog,g=((col>>8)&255)*fog,b=((col>>16)&255)*fog;col=0xff000000|(b<<16)|(g<<8)|r}
+        out[row+x]=col;wx+=dx;wy+=dy}}
+    this.bx.putImageData(this.floorImg,0,0)}
+  cageVerts(){const f=this.f,N=f.N,n=N.length,R=f.CR/Math.cos(Math.PI/n),V=[];for(let i=0;i<n;i++){const a=Math.atan2(N[i][1],N[i][0])+Math.PI/n;V.push([Math.cos(a)*R,Math.sin(a)*R])}return V}
+  // back walls before the fighters, near walls (see-through) after them
+  drawCage(x,front){const f=this.f,c=this.cam,V=this.cageVerts(),n=V.length,ring=!!this.o.ring,pal=arenaPal(this.kind),H=ring?30:34,NEAR=front?24:CAM.NEAR;
+    const kx=-c.sr,ky=c.cr;
+    for(let i=0;i<n;i++){const A=V[i],B=V[(i+1)%n],nx=f.N[(i+1)%n]?f.N[i]:f.N[i],nm=f.N[i],back=(nm[0]*kx+nm[1]*ky)>-.15;
+      if(back===!!front)continue;
+      let a=[A[0],A[1]],b=[B[0],B[1]];const da=(a[0]-c.cx)*kx+(a[1]-c.cy)*ky,db=(b[0]-c.cx)*kx+(b[1]-c.cy)*ky;
+      if(da<NEAR&&db<NEAR)continue;
+      if(da<NEAR){const t=(NEAR-da)/(db-da);a=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+      if(db<NEAR){const t=(NEAR-db)/(da-db);b=[b[0]+(a[0]-b[0])*t,b[1]+(a[1]-b[1])*t]}
+      const a0=this.proj(a[0],a[1],0),a1=this.proj(a[0],a[1],H),b0=this.proj(b[0],b[1],0),b1=this.proj(b[0],b[1],H);
+      if(!ring){x.globalAlpha=front?.14:.62;x.fillStyle=this.mesh;x.beginPath();x.moveTo(a0[0],a0[1]);x.lineTo(b0[0],b0[1]);x.lineTo(b1[0],b1[1]);x.lineTo(a1[0],a1[1]);x.closePath();x.fill();
+        x.globalAlpha=front?.08:.35;x.fillStyle='#000';x.beginPath();x.moveTo(a0[0],a0[1]);x.lineTo(b0[0],b0[1]);x.lineTo(b1[0],b1[1]);x.lineTo(a1[0],a1[1]);x.closePath();x.fill();x.globalAlpha=1;
+        const rail=(p,q,w,col)=>pline(x,p[0],p[1],q[0],q[1],w,col);
+        if(front)x.globalAlpha=.45;rail(a1,b1,front?2:3,'#16161b');rail([a1[0],a1[1]-1],[b1[0],b1[1]-1],1,pal.acc);
+        if(!front)rail(a0,b0,2,'#18181d');x.globalAlpha=1}
+      else{const cols=this.kind==='RYU'?['#efe9de','#d02a34','#efe9de']:['#efe9de','#d33a3a','#3a62c0'];
+        [10,18,26].forEach((h,j)=>{const p=this.proj(a[0],a[1],h),q=this.proj(b[0],b[1],h);x.globalAlpha=front?.55:1;pline(x,p[0],p[1],q[0],q[1],2,cols[j]);x.globalAlpha=1})}
+      // posts at the true corners
+      for(const [P,d] of [[A,da],[B,db]])if(d>=NEAR){const p0=this.proj(P[0],P[1],0),p1=this.proj(P[0],P[1],H+2),w=Math.max(2,Math.round(CAM.FOC/p0[2]*2.2));
+        x.globalAlpha=front?.3:1;prect(x,p0[0]-w/2,p1[1],w,p0[1]-p1[1],'#0f0f13');prect(x,p0[0]-w/2,p1[1]+(p0[1]-p1[1])*.25,w,(p0[1]-p1[1])*.3,ring?pal.acc:pal.acc);x.globalAlpha=1}}}
+  drawPano(x,ox,oy){const P=this.pano,PW=CAM.PW,c=this.cam,off=(((c.th*CAM.FOC)%PW)+PW)%PW,T=this.vt,amp=this.hype>.15?2:0,y=Math.round(CAM.H0+oy-P.PH+8);
+    const blit=(img,dy)=>{for(let k=-1;k<=1;k++)x.drawImage(img,Math.round(-off+k*PW+ox),y+dy)};
+    blit(P.bg,0);P.layers.forEach((L,i)=>{const o=amp?Math.round(Math.abs(Math.sin(T*(8+i*1.3)+i*1.7))*-amp):(Math.sin(T*1.3+i*2)>.97?-1:0);
+      if(this.hype>.4)blit(P.arms[i],o-(Math.sin(T*(10+i)+i)>0?1:0));blit(L,o)})}
+  minimap(x){const f=this.f,c=this.cam,S=.26,cx=18,cy=FVH-18,V=this.cageVerts();
+    const m=(wx,wy)=>{const xr=wx*c.cr+wy*c.sr,d=-wx*c.sr+wy*c.cr;return[cx+xr*S,cy-d*S]};
+    x.globalAlpha=.55;x.fillStyle='#000';x.beginPath();V.forEach((v,i)=>{const p=m(v[0],v[1]);i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])});x.closePath();x.fill();x.globalAlpha=1;
+    for(let i=0;i<V.length;i++){const p=m(V[i][0],V[i][1]),q=m(V[(i+1)%V.length][0],V[(i+1)%V.length][1]);pline(x,p[0],p[1],q[0],q[1],1,'rgba(240,232,214,.75)')}
+    for(const F of f.F){const p=m(F.x,F.y);prect(x,p[0]-1,p[1]-1,3,3,F.side?'#5d8dff':'#ff5a4a')}
+    const r=m(this.ref.x,this.ref.y);prect(x,r[0],r[1],1,1,'#ddd')}
+
   /* ---------- drawing ---------- */
-  draw(dt){const f=this.f,x=this.bx;
+  draw(dt){const f=this.f,x=this.bx;this.vt=(this.vt||0)+dt;const T=this.vt;
     let sx=0,sy=0;if(f.shake){sx=Math.round((Math.random()-.5)*f.shake*FVS);sy=Math.round((Math.random()-.5)*f.shake*FVS*.6)}
-    x.setTransform(1,0,0,1,0,0);x.fillStyle='#000';x.fillRect(0,0,FVW,FVH);x.setTransform(1,0,0,1,sx,sy);
-    x.drawImage(this.bg,0,0);
-    this.vt=(this.vt||0)+dt;const T=this.vt,amp=this.hype>.15?2:0;this.crowd.forEach((c,i)=>{const o=amp?Math.round(Math.abs(Math.sin(T*(8+i*1.3)+i*1.7))*-amp):(Math.sin(T*1.3+i*2)>.97?-1:0);
-      if(this.hype>.4&&this.crowd.arms)x.drawImage(this.crowd.arms[i],0,o-(Math.sin(T*(10+i)+i)>0?1:0));x.drawImage(c,0,o)});
-    // sweeping spotlights when the place is rocking
-    if(this.hype>.55&&this.kind!=='REG'){for(let i=0;i<2;i++){const cx=FVW/2+Math.sin(T*1.3+i*Math.PI)*FVW*.38;x.globalAlpha=.07*this.hype;x.fillStyle='#fff3cf';x.beginPath();x.moveTo(cx-4,20);x.lineTo(cx+4,20);x.lineTo(cx+34,FVY);x.lineTo(cx-34,FVY);x.fill()}x.globalAlpha=1}
-    if(this.kind!=='REG'&&Math.random()<.08+this.hype*.5){const fx=Math.floor(Math.random()*FVW),fy=30+Math.floor(Math.random()*(FVY-110));prect(x,fx-1,fy,3,1,'#fff');prect(x,fx,fy-1,1,3,'#fff')}
-    for(const d of this.decals)prect(x,d[0],d[1],d[2],1,'#7a1414');
-    const shadowAt=(ux,w)=>{x.fillStyle='rgba(0,0,0,.35)';x.fillRect(Math.round(ux*FVS-w),FVY-1,w*2,3);x.fillRect(Math.round(ux*FVS-w+3),FVY+2,w*2-6,1)};
-    shadowAt(this.ref.x,9);const r=this.ref;let rp=r.pose;if(Math.abs(r.vx)>3&&rp===PO.ref){const s=Math.sin(r.walkT*14);rp=ov(rp,{Fb:[rp.Fb[0]+s*2,rp.Fb[1]-Math.max(0,s)],Ff:[rp.Ff[0]-s*2,rp.Ff[1]-Math.max(0,-s)]})}
-    x.globalAlpha=.92;figure(x,rp,r.x,r.face,r.look,{ref:1,build:.95});x.globalAlpha=1;
-    if(f.pos==='ground'&&f.g){shadowAt(f.g.bot.x,24);this.drawGround(x)}
-    else{for(const F of f.F)shadowAt(F.x,F.down>0?20:11);const order=[...f.F].sort((a,b)=>(a.act?1:0)-(b.act?1:0));for(const F of order)this.drawStand(x,F,dt)}
-    if(this.o.ring)drawRopes(x,this.kind);
+    this.camUpdate(dt);this.place();if(this.cut>0)this.cut-=dt;
+    x.setTransform(1,0,0,1,0,0);this.floor7(sx,sy);x.setTransform(1,0,0,1,sx,sy);
+    if(CAM.H0>4)this.drawPano(x,0,0);
+    if(this.kind!=='REG'){this.flashes=this.flashes||[];if(Math.random()<dt*(1.5+this.hype*14)){const a=Math.random()*6.283,rr=f.CR+22+Math.random()*70;this.flashes.push({x:Math.cos(a)*rr,y:Math.sin(a)*rr,l:.09})}
+      for(const q of this.flashes){q.l-=dt;const P=this.proj(q.x,q.y,6);if(P[2]>CAM.NEAR&&q.l>0){prect(x,P[0]-1,P[1],3,1,'#fff');prect(x,P[0],P[1]-1,1,3,'#fff')}}this.flashes=this.flashes.filter(q=>q.l>0)}
+    if(this.hype>.55&&this.kind!=='REG'){for(let i=0;i<2;i++){const cx=FVW/2+Math.sin(T*1.3+i*Math.PI)*FVW*.38;x.globalAlpha=.07*this.hype;x.fillStyle='#fff3cf';x.beginPath();x.moveTo(cx-4,0);x.lineTo(cx+4,0);x.lineTo(cx+34,FVY);x.lineTo(cx-34,FVY);x.fill()}x.globalAlpha=1}
+    this.drawCage(x,false);
+    for(const d of this.decalW){const P=this.proj(d[0],d[1],0);if(P[2]>CAM.NEAR)prect(x,P[0],P[1],d[2],1,'#7a1414')}
+    const shadowAt=(px,py,w)=>{x.fillStyle='rgba(0,0,0,.35)';x.fillRect(Math.round(px-w),py-1,w*2,3);x.fillRect(Math.round(px-w+3),py+2,w*2-6,1)};
+    // draw referee and fighters back to front
+    const r=this.ref,items=[];
+    items.push({d:r.pd,fn:()=>{if(!(r.pd>CAM.NEAR))return;shadowAt(r.px,r.py,9);let rp=r.pose;if(r.vx>3&&rp===PO.ref){const s2=Math.sin(r.walkT*14);rp=ov(rp,{Fb:[rp.Fb[0]+s2*2,rp.Fb[1]-Math.max(0,s2)],Ff:[rp.Ff[0]-s2*2,rp.Ff[1]-Math.max(0,-s2)]})}
+      x.save();x.translate(r.px,r.py-FVY);x.globalAlpha=.94;figure(x,rp,0,r.sf,r.look,{ref:1,build:.95});x.restore()}});
+    if(f.pos==='ground'&&f.g){const b=f.g.bot;items.push({d:b.pd,fn:()=>{shadowAt(b.px,b.py,24);this.drawGround(x)}})}
+    else{const order=[...f.F].sort((a,b)=>(a.act?1:0)-(b.act?1:0));order.forEach((F,i)=>items.push({d:F.pd-i*.01,fn:()=>{shadowAt(F.px,F.py,F.down>0?20:11);this.drawStand(x,F,dt)}}))}
+    items.sort((a,b)=>b.d-a.d).forEach(it=>it.fn());
+    this.drawCage(x,true);
     for(const p of this.parts){
       if(p.k==='burst'){const t=1-p.l/p.m,S=p.s;
-        if(t<.34){const r=Math.round(7*S);prect(x,p.x-r,p.y-1,r*2+1,3,'#fff');prect(x,p.x-1,p.y-r,3,r*2+1,'#fff');for(const [a,b] of [[1,1],[1,-1],[-1,1],[-1,-1]])pline(x,p.x+a*2,p.y+b*2,p.x+a*r*.7,p.y+b*r*.7,2,'#ffe066');pcirc(x,p.x,p.y,Math.round(3*S),'#fff6c8')}
-        else if(t<.67){const r=Math.round(9*S);for(let i=0;i<10;i++){const a=i/10*Math.PI*2;prect(x,p.x+Math.cos(a)*r-1,p.y+Math.sin(a)*r*.8-1,3,3,i%2?'#ffe066':'#fff')}pcirc(x,p.x,p.y,Math.round(2*S),'#ffd04a')}
-        else{const r=Math.round(12*S);for(let i=0;i<8;i++){const a=i/8*Math.PI*2+.4;prect(x,p.x+Math.cos(a)*r,p.y+Math.sin(a)*r*.8,2,2,'#ffb347')}}continue}
+        if(t<.34){const rr=Math.round(7*S);prect(x,p.x-rr,p.y-1,rr*2+1,3,'#fff');prect(x,p.x-1,p.y-rr,3,rr*2+1,'#fff');for(const [a,b] of [[1,1],[1,-1],[-1,1],[-1,-1]])pline(x,p.x+a*2,p.y+b*2,p.x+a*rr*.7,p.y+b*rr*.7,2,'#ffe066');pcirc(x,p.x,p.y,Math.round(3*S),'#fff6c8')}
+        else if(t<.67){const rr=Math.round(9*S);for(let i=0;i<10;i++){const a=i/10*Math.PI*2;prect(x,p.x+Math.cos(a)*rr-1,p.y+Math.sin(a)*rr*.8-1,3,3,i%2?'#ffe066':'#fff')}pcirc(x,p.x,p.y,Math.round(2*S),'#ffd04a')}
+        else{const rr=Math.round(12*S);for(let i=0;i<8;i++){const a=i/8*Math.PI*2+.4;prect(x,p.x+Math.cos(a)*rr,p.y+Math.sin(a)*rr*.8,2,2,'#ffb347')}}continue}
       if(p.k==='lines'){const t=1-p.l/p.m;for(const dy of [-6,0,6]){const len=10+Math.abs(dy)*-0.5,x0=p.x-p.d*(14+t*10);x.globalAlpha=1-t;prect(x,Math.min(x0,x0-p.d*len),p.y+dy,len,1,'#fff');x.globalAlpha=1}continue}
-      if(p.k==='star'){const t=p.l/p.m,s=Math.max(1,Math.round(p.s*t));prect(x,p.x-s,p.y-1,s*2+1,3,'#fff');prect(x,p.x-1,p.y-s,3,s*2+1,'#fff');prect(x,p.x-1,p.y-1,3,3,'#ffe066');continue}
+      if(p.k==='star'){const t=p.l/p.m,s2=Math.max(1,Math.round(p.s*t));prect(x,p.x-s2,p.y-1,s2*2+1,3,'#fff');prect(x,p.x-1,p.y-s2,3,s2*2+1,'#fff');prect(x,p.x-1,p.y-1,3,3,'#ffe066');continue}
       if(p.k==='ring'){const t=1-p.l/p.m,rad=4+t*12;x.fillStyle=p.c||'rgba(255,255,255,.8)';for(let i=0;i<16;i++){const a=i/16*Math.PI*2;x.fillRect(Math.round(p.x+Math.cos(a)*rad),Math.round(p.y+Math.sin(a)*rad*.8),2,2)}continue}
       x.globalAlpha=p.a?Math.min(1,p.l*2):1;prect(x,p.x,p.y,p.s,p.s,p.c);x.globalAlpha=1}
-    x.setTransform(1,0,0,1,0,0);x.drawImage(this.vig,0,0);
+    x.setTransform(1,0,0,1,0,0);x.drawImage(this.vig,0,0);this.minimap(x);if(this.cut>0){x.fillStyle=`rgba(0,0,0,${this.cut*5})`;x.fillRect(0,0,FVW,FVH)}
     if(f.phase==='end'&&f.pt<1){x.fillStyle=`rgba(255,255,255,${Math.max(0,.3-f.pt*.3)})`;x.fillRect(0,0,FVW,FVH)}
-    // camera: zoom toward the downed fighter on knockdowns and finishes
+    // zoom toward the downed fighter on knockdowns and finishes
     const D=f.F.find(F=>F.down>0),zt=(f.phase==='end'&&D)?1.22:(D&&f.slow>0?1.12:1);this.zoom+=(zt-this.zoom)*Math.min(1,dt*4);
-    const c=this.ctx;c.imageSmoothingEnabled=false;c.setTransform(1,0,0,1,0,0);
-    if(this.zoom>1.005&&D){const z=this.zoom,cx=clamp(D.x*FVS,FVW/(2*z),FVW-FVW/(2*z)),cy=clamp((FVY-20),FVH/(2*z),FVH-FVH/(2*z));c.drawImage(this.buf,cx-FVW/(2*z),cy-FVH/(2*z),FVW/z,FVH/z,0,0,FVW,FVH)}
-    else c.drawImage(this.buf,0,0)}
+    const cc=this.ctx;cc.imageSmoothingEnabled=false;cc.setTransform(1,0,0,1,0,0);
+    if(this.zoom>1.005&&D){const z=this.zoom,cx=clamp(D.px,FVW/(2*z),FVW-FVW/(2*z)),cy=clamp(D.py-20,FVH/(2*z),FVH-FVH/(2*z));cc.drawImage(this.buf,cx-FVW/(2*z),cy-FVH/(2*z),FVW/z,FVH/z,0,0,FVW,FVH)}
+    else cc.drawImage(this.buf,0,0)}
   poseStand(F){const f=this.f;
     if(F.win&&f.phase==='end'&&f.pt>.9){const k=Math.sin(f.pt*5.5);return mixP(PO.win,PO.win2,k*.5+.5)}
     if(F.down>0){const t=F.vFall||0;if(t<.16)return mixP(F.hurt>0||F.stag>0?PO.stag:PO.hurt,PO.fall,ease(t/.16));if(t<.38)return mixP(PO.fall,PO.down,ease((t-.16)/.22));return PO.down}
@@ -423,15 +559,16 @@ class LiveView{
   actPoseS(F){return this.snap(F,this.actPose(F))}
   actPose(F){const a=F.act,c=PCH[a.k],C=PO[c[0]],X=PO[c[1]],St=this.f.pos==='clinch'?PO.clinch:PO.stance;
     if(a.ph==='w')return mixP(St,C,ease(a.t/a.dw));if(a.ph==='a')return mixP(C,X,Math.min(1,a.t/Math.min(a.da,.06)));return mixP(X,St,ease(a.t/a.dr))}
-  drawStand(x,F,dt){const f=this.f;
+  drawStand(x,F,dt){x.save();x.translate(F.px,F.py-FVY);this.drawStand0(x,F,dt);x.restore()}
+  drawStand0(x,F,dt){const f=this.f;
     if(F.down>0)F.vFall=(F.vFall||0)+dt;else{if(F.vFall>0&&!F.lost)F.vRise=.45;F.vFall=0}if(F.vRise>0)F.vRise-=dt;if(F.snap>0)F.snap-=dt;
     const J=this.poseStand(F);if(F.flashT>0)F.flashT-=dt;
     const a=F.act;if(a&&a.m.pow&&TRAIL[a.k]&&(a.ph==='a'||(a.ph==='r'&&a.t<.05))){const c=PCH[a.k],j=TRAIL[a.k],C=PO[c[0]][j],X=PO[c[1]][j];
-      for(let i=1;i<=4;i++){const t=1-i*.22,px=(F.x+F.face*(C[0]+(X[0]-C[0])*t))*FVS,py=(LV.FLOOR+C[1]+(X[1]-C[1])*t)*FVS;x.globalAlpha=.42-i*.08;prect(x,px-3,py-3,7,7,'#fff6d0')}x.globalAlpha=1}
-    figure(x,J,F.x,F.face,F.look,{build:F.build,flash:F.flashT>0,hurt:F.hurt>0||F.stag>0,lying:F.down>0&&(F.vFall||0)>.3,ko:F.down>0&&(F.lost||F.head<20),dmg:1-F.headMax/100+(F.head<35?.25:0)});
+      for(let i=1;i<=4;i++){const t=1-i*.22,px=(0+F.sf*(C[0]+(X[0]-C[0])*t))*FVS,py=(LV.FLOOR+C[1]+(X[1]-C[1])*t)*FVS;x.globalAlpha=.42-i*.08;prect(x,px-3,py-3,7,7,'#fff6d0')}x.globalAlpha=1}
+    figure(x,J,0,F.sf,F.look,{build:F.build,flash:F.flashT>0,hurt:F.hurt>0||F.stag>0,lying:F.down>0&&(F.vFall||0)>.3,ko:F.down>0&&(F.lost||F.head<20),dmg:1-F.headMax/100+(F.head<35?.25:0)});
     if(F.fire>0&&F.down<=0){const t=f.T;for(let i=0;i<6;i++){const ph=(t*1.6+i/6)%1,jx=['Hf','Hb','H','P','Ef','Eb'][i],j=J[jx];
-      x.globalAlpha=1-ph;prect(x,(F.x+F.face*j[0])*FVS+Math.sin(t*9+i*2)*3,(LV.FLOOR+j[1])*FVS-ph*14,2,2,ph<.4?'#ffe066':'#ff7a2b')}x.globalAlpha=1}
-    if(F.stag>0&&F.down<=0){const h=J.H,t=f.T;for(let i=0;i<3;i++){const an=t*6+i*2.1;prect(x,(F.x+F.face*h[0]+Math.cos(an)*6)*FVS,(LV.FLOOR+h[1]-8+Math.sin(an)*1.5)*FVS,2,2,i?'#ffe066':'#fff')}}}
+      x.globalAlpha=1-ph;prect(x,(0+F.sf*j[0])*FVS+Math.sin(t*9+i*2)*3,(LV.FLOOR+j[1])*FVS-ph*14,2,2,ph<.4?'#ffe066':'#ff7a2b')}x.globalAlpha=1}
+    if(F.stag>0&&F.down<=0){const h=J.H,t=f.T;for(let i=0;i<3;i++){const an=t*6+i*2.1;prect(x,(0+F.sf*h[0]+Math.cos(an)*6)*FVS,(LV.FLOOR+h[1]-8+Math.sin(an)*1.5)*FVS,2,2,i?'#ffe066':'#fff')}}}
   groundPoses(){const f=this.f,g=f.g,b=g.bot,t=g.top,pos=g.pos;let JB=GB[pos],JT=GT[pos];
     const jig=f.ct?Math.sin(f.T*35)*.6:0;
     const strike=(F,J,target)=>{const a=F.act;if(!a||!['gnp','hgnp','bstrike'].includes(a.k))return J;const e=a.ph==='w'?-.3*ease(a.t/a.dw):a.ph==='a'?1:1-ease(a.t/a.dr);
@@ -443,7 +580,8 @@ class LiveView{
     const isSub=!!(f.ct&&f.ct.kind==='sub');
     for(const F of [b,t])if(F.flashT>0)F.flashT-=1/60;
     return{JB:sh(JB),JT:isSub?sh(JT):JT,isSub}}
-  drawGround(x){const f=this.f,g=f.g,b=g.bot,t=g.top,fb=b.face,pos=g.pos;let JB=GB[pos],JT=GT[pos];
+  drawGround(x){x.save();x.translate(this.f.g.bot.px,this.f.g.bot.py-FVY);this.drawGround0(x);x.restore()}
+  drawGround0(x){const f=this.f,g=f.g,b=g.bot,t=g.top,fb=g.sfb||1,pos=g.pos;let JB=GB[pos],JT=GT[pos];
     const jig=f.ct?Math.sin(f.T*35)*.6:0;
     const strike=(F,J,target)=>{const a=F.act;if(!a||!['gnp','hgnp','bstrike'].includes(a.k))return J;const e=a.ph==='w'?-.3*ease(a.t/a.dw):a.ph==='a'?1:1-ease(a.t/a.dr);
       if(e<0)return ov(J,{Hf:[J.Hf[0]+2,J.Hf[1]-3],Ef:[J.Ef[0]+1,J.Ef[1]-3]});
@@ -453,9 +591,9 @@ class LiveView{
     const sh=k=>{const o={};for(const q of PJ)o[q]=[k[q][0]+jig,k[q][1]];return o};
     const isSub=f.ct&&f.ct.kind==='sub';
     for(const F of [b,t])if(F.flashT>0)F.flashT-=1/60;
-    figure(x,sh(JB),b.x,fb,b.look,{lying:pos!=='back',eye:fb,build:b.build,flash:b.flashT>0,dmg:1-b.headMax/100+(b.head<35?.25:0)});
-    figure(x,isSub?sh(JT):JT,b.x,fb,t.look,{eye:pos==='back'?fb:-fb,build:t.build,flash:t.flashT>0,dmg:1-t.headMax/100});
-    if(isSub){const h=JB.H;const px=(b.x+fb*h[0])*FVS,py=(LV.FLOOR+h[1])*FVS;const k=Math.sin(f.T*20);prect(x,px-1+k,py-14,3,6,'#ff5a3c');prect(x,px-1+k,py-6,3,2,'#ff5a3c')}}
+    figure(x,sh(JB),0,fb,b.look,{lying:pos!=='back',eye:fb,build:b.build,flash:b.flashT>0,dmg:1-b.headMax/100+(b.head<35?.25:0)});
+    figure(x,isSub?sh(JT):JT,0,fb,t.look,{eye:pos==='back'?fb:-fb,build:t.build,flash:t.flashT>0,dmg:1-t.headMax/100});
+    if(isSub){const h=JB.H;const px=(0+fb*h[0])*FVS,py=(LV.FLOOR+h[1])*FVS;const k=Math.sin(f.T*20);prect(x,px-1+k,py-14,3,6,'#ff5a3c');prect(x,px-1+k,py-6,3,2,'#ff5a3c')}}
 
   /* ---------- HUD ---------- */
   hud(dt){const f=this.f,u=this.ui;
@@ -472,14 +610,14 @@ class LiveView{
     if(c){const s=f.share(),red=c.A.side===0?s:1-s,need=c.A.side===0?c.need:1-c.need;u.ct.querySelector('.lctbar i').style.width=(red*100)+'%';u.ct.querySelector('em').style.left=(need*100)+'%';
       const n=u.ct.querySelectorAll('.lctn span,.lctn b');n[0].textContent=f.F[0].name;n[1].textContent=c.label;n[2].textContent=f.F[1].name}
     if(H)this.updPad()}
-  updPad(){const f=this.f,H=f.human,O=H.o,lab={};const gap=Math.abs(H.x-O.x);
+  updPad(){const f=this.f,H=f.human,O=H.o,lab={};const gap=f.gap(H);
     if(f.phase==='end'||f.phase==='break'){for(const k of 'JPKSB')lab[k]=['—','']}
     else if(f.ct){for(const k of 'JPKSB')lab[k]=['Tap!','']}
     else if(f.pos==='stand'){
       if(O.down>0){lab.J=['Pounce',''];lab.P=['Pounce',''];lab.S=['Pounce',''];lab.K=f.ring?['Soccer kick','']:['—',''];lab.B=['Block','']}
       else if(f.fhl&&f.fhl.side===H.side&&gap<16){lab.J=['Jab','counter'];lab.P=['Choke','hold: guillotine'];lab.K=['Knee',''];lab.S=['Go behind','take the back'];lab.B=['Block','']}
       else{const kk=O.act&&O.act.m.kick&&O.act.ph!=='r'&&gap<=O.act.m.rng+3,op=O.open>0;
-        const rel=Math.sign(f.inp.dir)*H.face;
+        const rv=f.rel(H),rel=rv>.5?1:rv<-.5?-1:0;
         lab.J=['Jab',op?'he\'s open!':''];lab.P=rel<0?['Body','hook']:['Power',op?'he\'s open!':rel>0?'hold: superman':'hold: overhand'];lab.K=rel>0?['Body kick','hold: spin']:rel<0?['Teep','push kick']:['Kick','hold: head'];lab.S=kk?['Catch','the kick']:gap<12?['Clinch','']:['Shoot','takedown'];lab.B=['Block',f.sprawlW&&f.sprawlW.side===H.side?'Sprawl now!':'tap: sprawl']}}
     else if(f.pos==='clinch'){lab.J=['Punches',''];lab.P=['Knee',''];lab.K=['Trip',''];lab.S=['Body lock',''];lab.B=['Break','']}
     else{const g=f.g,top=g.top===H,gp=g.pos;
@@ -496,7 +634,7 @@ class LiveView{
     const H=f.human,side=H?H.side:0,[A,B]=f.F;
     const row=(l,a,b)=>`<span class="l">${a}</span><span class="c">${l}</span><span>${b}</span>`;
     if(kind==='pause')u.innerHTML=`<h2>Paused</h2><div class="list"><button class="mrow" data-lv="resume">${svg(PLAYI)}<span>Resume</span></button><button class="mrow" data-lv="help">${svg(BOOKI)}<span>Controls</span></button><button class="mrow" data-lv="sound">${svg('<path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6"/>')}<span>Sound: ${SFX.on?'On':'Off'}</span></button>${H?`<button class="mrow" data-lv="swap">${svg(ICO.swap)}<span>Buttons on the ${this.swap?'left':'right'}</span></button>`:''}<button class="mrow" data-lv="simrest">${svg('<path d="M5 5l7 7-7 7M12 5l7 7-7 7"/>')}<span>Simulate the rest</span></button>${this.o.canQuit?`<button class="mrow danger" data-lv="quit">${svg(XI)}<span>Quit fight</span></button>`:''}</div>`;
-    else if(kind==='help')u.innerHTML=`<h2>Controls</h2><div class="howto lhelp"><div><h4>Standing</h4><ul><li>Drag the <b>thumbstick</b> left or right to move. Flick away twice quickly to dodge.</li><li><b>Jab</b> is fast. <b>Power</b> throws the cross and hook. Hold it for an overhand.</li><li><b>Kick</b> attacks the legs. Hold it for a head kick.</li><li><b>Block</b> holds your guard and checks leg kicks. Tap it when he shoots to sprawl.</li><li><b>Shoot</b> is a takedown from range, or a clinch up close.</li><li><b>Combos:</b> press the next strike as the last one lands to flow into it faster. Uppercuts come in up close.</li><li><b>Stick + strike:</b> back + Power is a body hook, forward + hold Power a superman punch. Forward + Kick is a body kick, back + Kick a teep, forward + hold Kick a spinning back kick. Spinning and flying moves leave you open if they miss.</li><li>Double-tap toward him to dash in. Land clean shots to fill your <b>momentum</b> bar. When it's full you're on fire: faster, harder hands for a few seconds.</li></ul><h4>Counters</h4><ul><li><b>Parry:</b> raise Block right as a punch lands. He's left open, so hit back hard.</li><li><b>Catch kick:</b> tap Shoot as his kick comes in to catch it and dump him.</li><li><b>Counter knee:</b> throw Power or a knee as he shoots to stop the takedown cold.</li><li><b>After a sprawl:</b> Shoot to go behind, or hold Power for a guillotine (if it fails, you land on your back).</li></ul></div><div><h4>Clinch and ground</h4><ul><li>The buttons change with the position. Read their labels.</li><li>On top: punch, elbow, advance position, submit. Move the stick to stand up.</li><li>On bottom: defend, sweep or escape, get up, submit from guard. From side control you can wall-walk up.</li><li>Every failed attempt and every blocked shot wears him down. Keep scrambling. Explode while he loads up an elbow for a big bonus.</li><li>Stall on top and the referee stands you up. Keep working.</li><li>Scrambles and submissions are tap battles: <b>tap the glowing pad fast</b>.</li></ul></div><p class="hint">Keyboard: A/D move, Space block, J jab, K power, L kick, I shoot, P pause.</p></div><button class="btn block" data-lv="pause">Back</button>`;
+    else if(kind==='help')u.innerHTML=`<h2>Controls</h2><div class="howto lhelp"><div><h4>Standing</h4><ul><li>Drag the <b>thumbstick</b> in any direction to move around the cage: toward or away from him, or up and down to circle. Flick away twice to dodge back, up or down twice to slip sideways, toward twice to dash in.</li><li>Don't get stuck on the fence. Punches land harder on a man pinned against it, so circle off, or cut the cage off on him.</li><li><b>Jab</b> is fast. <b>Power</b> throws the cross and hook. Hold it for an overhand.</li><li><b>Kick</b> attacks the legs. Hold it for a head kick.</li><li><b>Block</b> holds your guard and checks leg kicks. Tap it when he shoots to sprawl.</li><li><b>Shoot</b> is a takedown from range, or a clinch up close.</li><li><b>Combos:</b> press the next strike as the last one lands to flow into it faster. Uppercuts come in up close.</li><li><b>Stick + strike:</b> back + Power is a body hook, forward + hold Power a superman punch. Forward + Kick is a body kick, back + Kick a teep, forward + hold Kick a spinning back kick. Spinning and flying moves leave you open if they miss.</li><li>Double-tap toward him to dash in. Land clean shots to fill your <b>momentum</b> bar. When it's full you're on fire: faster, harder hands for a few seconds.</li></ul><h4>Counters</h4><ul><li><b>Parry:</b> raise Block right as a punch lands. He's left open, so hit back hard.</li><li><b>Catch kick:</b> tap Shoot as his kick comes in to catch it and dump him.</li><li><b>Counter knee:</b> throw Power or a knee as he shoots to stop the takedown cold.</li><li><b>After a sprawl:</b> Shoot to go behind, or hold Power for a guillotine (if it fails, you land on your back).</li></ul></div><div><h4>Clinch and ground</h4><ul><li>The buttons change with the position. Read their labels.</li><li>On top: punch, elbow, advance position, submit. Move the stick to stand up.</li><li>On bottom: defend, sweep or escape, get up, submit from guard. From side control you can wall-walk up.</li><li>Every failed attempt and every blocked shot wears him down. Keep scrambling. Explode while he loads up an elbow for a big bonus.</li><li>Stall on top and the referee stands you up. Keep working.</li><li>Scrambles and submissions are tap battles: <b>tap the glowing pad fast</b>.</li></ul></div><p class="hint">Keyboard: WASD or arrows move, Space block, J jab, K power, L kick, I shoot, P pause.</p></div><button class="btn block" data-lv="pause">Back</button>`;
     else if(kind==='break'){const r=f.round,st=f.rstats[r-1],pv=f.rstats[r-2],d=(i,k)=>st[i][k]-(pv?pv[i][k]:0),adv=H?f.advice(side):[];
       u.innerHTML=`<div class="lbl">End of round ${r} of ${f.rounds.length}</div><h2>Your corner</h2>
         <div class="tape num">${row('',`<b style="color:#e8574b">${esc(A.name)}</b>`,`<b style="color:#6b95ea">${esc(B.name)}</b>`)}${row('Landed',d(0,'landed'),d(1,'landed'))}${row('Takedowns',d(0,'td'),d(1,'td'))}${row('Knockdowns',d(0,'kd'),d(1,'kd'))}</div>

@@ -9,6 +9,7 @@ The whole game runs in the browser with no build step and no server. It installs
 ### Hands-on fights
 Every fight can be played live in a side-on pixel-art arena:
 - **Striking:** jab, cross/hook combos, overhand, leg kicks and head kicks, blocking, checking kicks, and dodging.
+- **Octagon fights:** fighters move freely around the cage: circle, cut off the cage, pin a man against any side of the fence. A SNES-style "Mode 7" broadcast camera swings around the action, with seating all around the cage and a mini-map in the corner.
 - **Dynamic striking:** combos that flow faster when you chain them, uppercuts up close, body hooks and body kicks, teeps, a superman punch and a spinning back kick (risky if they miss), dash-ins, knockback against the fence, rocked states, and a momentum meter that puts you on fire.
 - **Counters:** parries (block right as a punch lands), catch kicks, counter knees into a shot, and front-headlock follow-ups after a sprawl (go behind or guillotine).
 - **Damage that matters:** separate head, body and leg damage, stamina, knockdowns, and wobbled fighters.
@@ -43,7 +44,7 @@ Both modes share a **News** tab with headlines, media grades and fan reactions t
 
 | Touch | Keyboard | Standing | Clinch | Ground (top / bottom) |
 |---|---|---|---|---|
-| ◀ ▶ | A / D | Move (double-tap away to dodge, toward to dash in) | | Hold to stand up / — |
+| Stick | WASD / arrows | Move anywhere in the cage (double-tap away to dodge, toward to dash in, up or down to slip sideways) | | Hold to stand up / — |
 | Block | Space | Guard up, check kicks, tap to sprawl, time it to parry | Break | Posture / Defend |
 | Jab | J | Jab | Short punches | Punch / Strike |
 | Power | K | Cross, hook, uppercut up close (hold: overhand; back: body hook; forward + hold: superman) | Knee | Elbow / Submit (guard) |

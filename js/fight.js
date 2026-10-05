@@ -6,7 +6,7 @@
  * Loaded before game.js; uses helpers from game.js (clamp, pick, seeded, hash, pickr) at runtime.
  * Fighter sides: 0 = red corner (A), 1 = blue corner (B). Results match simFight()'s shape.
  */
-const LV={W:128,H:80,FLOOR:70,L:10,R:118,TS:5,MINGAP:9,PACE:.78,BREATH:2.2,TAPGRACE:.45};
+const LV={W:128,H:80,FLOOR:70,L:10,R:118,CAGE:48,RING:44,TS:5,MINGAP:9,PACE:.78,BREATH:2.2,TAPGRACE:.45};
 const LMV={
   jab:{w:.09,a:.06,r:.14,sta:3.5,rng:18,dmg:3,tgt:'head',pts:1,nm:'jab'},
   cross:{w:.15,a:.06,r:.24,sta:6.5,rng:17,dmg:7,tgt:'head',pts:2,pow:1,nm:'right hand'},
@@ -47,6 +47,9 @@ const GPOS=['guard','half','side','mount','back'];
 const GPN={guard:'full guard',half:'half guard',side:'side control',mount:'mount',back:'back control'};
 const GMULT={guard:.7,half:.9,side:1,mount:1.35,back:1.2};
 const LSUBS={guard:['triangle choke','armbar','guillotine'],half:['kimura'],side:['arm-triangle choke','kimura'],mount:['armbar','arm-triangle choke'],back:['rear-naked choke']};
+/* ---------------- arena geometry: the fight happens on a 2D mat inside the fence ---------------- */
+function cageN(ring){const n=ring?4:8,out=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2+(ring?Math.PI/4:0);out.push([Math.cos(a),Math.sin(a)])}return out}
+function cageR(ring){return ring?LV.RING:LV.CAGE}
 const LHIT=['%A lands clean!','Big shot from %A!','%A finds a home for that one.','%D eats it and keeps coming.','%A snaps the head back!','That one stung %D.'];
 
 function lookOf(f,side){const r=seeded(hash(f.id||f.last,'look'));
@@ -55,12 +58,12 @@ function lookOf(f,side){const r=seeded(hash(f.id||f.last,'look'));
   return{skin:pickr(r,SK),hair:pickr(r,HC),hs:Math.floor(r()*5),beard:r()<.35,
     side,trunk:side?'#2f63c8':'#cf3a2e',trunk2:side?'#1d3f86':'#8c2219',glove:side?'#1c3570':'#701b15'}}
 function mkLF(f,side,human){const r=f.r;
-  return{f,side,human,name:f.last,x:LV.W/2+(side?15:-15),face:side?-1:1,vx:0,
+  return{f,side,human,name:f.last,x:side?15:-15,y:0,face:side?-1:1,vx:0,vy:0,kbx:0,kby:0,
     head:100,headMax:100,body:100,legs:100,sta:100,
     act:null,queue:null,qT:0,block:false,hurt:0,stag:0,down:0,inv:0,stuff:0,dodge:0,sprawl:false,
-    kdR:0,legKD:0,unans:0,blockT0:-9,open:0,shootCD:0,dash:0,mo:0,fire:0,chain:0,chainT:9,kb:0,landT:-9,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
+    kdR:0,legKD:0,unans:0,blockT0:-9,open:0,shootCD:0,dash:0,mo:0,fire:0,chain:0,chainT:9,landT:-9,lastAtk:'',lastAtkT:9,combo:0,walkT:0,hitT:9,win:false,lost:false,
     spd:1.12-(r.str-50)/250,mv:24*(.85+r.car/400+(r.str-50)/500),
-    ai:{t:.4+Math.random()*.3,dir:0,blockT:0,react:0,seen:null,combo:0},
+    ai:{t:.4+Math.random()*.3,dir:0,lat:0,latT:0,blockT:0,react:0,seen:null,combo:0},
     st:{thrown:0,landed:0,kd:0,td:0,tda:0,sub:0,ctrl:0,head:0,body:0,legs:0,blocked:0},
     look:lookOf(f,side)}}
 
@@ -73,8 +76,18 @@ class LiveFight{
     this.pos='stand';this.g=null;this.ct=null;this.idle=0;
     this.rp=[[0,0]];this.rkd=[[0,0]];this.log=[[]];this.cards=[[0,0],[0,0],[0,0]];this.rcards=[];this.rstats=[];
     this.ctEnd=-9;this.ev=[];this.shake=0;this.slow=0;this.call='';this.callT=0;this.sprawlW=null;this.fhl=null;this.res=null;this.lastStand=null;
-    this.inp={dir:0,B:false};this.taps=[];
+    this.inp={dir:0,wx:0,wy:0,B:false};this.taps=[];this.N=cageN(this.ring);this.CR=cageR(this.ring);this.axis=[1,0];
   }
+  /* ---- 2D helpers ---- */
+  u(F){const O=F.o,dx=O.x-F.x,dy=O.y-F.y,d=Math.hypot(dx,dy);return d>1e-6?[dx/d,dy/d,d]:[this.axis[0]*(F.side?-1:1),this.axis[1]*(F.side?-1:1),0]}
+  gap(F){return Math.hypot(F.o.x-F.x,F.o.y-F.y)}
+  fenceDist(P){let m=-1e9;for(const n of this.N)m=Math.max(m,P.x*n[0]+P.y*n[1]);return this.CR-m}
+  fenceN(P){let best=null,m=-1e9;for(const n of this.N){const d=P.x*n[0]+P.y*n[1];if(d>m){m=d;best=n}}return best}
+  clampIn(P,margin){const R=this.CR-(margin||0);for(let k=0;k<2;k++)for(const n of this.N){const d=P.x*n[0]+P.y*n[1]-R;if(d>0){P.x-=n[0]*d;P.y-=n[1]*d}}}
+  place(F,x,y,margin){F.x=x;F.y=y;this.clampIn(F,margin||0)}
+  push(F,ux,uy,v){F.vx=ux*v;F.vy=uy*v}
+  rel(F){const u=this.u(F);return this.inp.wx*u[0]+this.inp.wy*u[1]}   // stick toward (+) or away (-) from the opponent
+  pinned(A,D){if(this.fenceDist(D)>=7)return false;const n=this.fenceN(D),u=this.u(A);return u[0]*n[0]+u[1]*n[1]>.3}
   get human(){return this.F.find(F=>F.human)||null}
   emit(type,d){this.ev.push(Object.assign({type},d||{}))}
   say(t,big){this.call=t;this.callT=2.4;const L=this.log[this.round-1];if(big||L.length<40)L.push({t,big:!!big})}
@@ -88,7 +101,7 @@ class LiveFight{
   update(dt){
     dt*=LV.PACE;this.T+=dt;if(this.slow>0)this.slow-=dt;if(this.shake>0)this.shake=Math.max(0,this.shake-dt*18);if(this.callT>0)this.callT-=dt;
     if(this.phase==='intro'){this.pt+=dt;if(this.pt>1.4){this.phase='fight';this.emit('bell');this.say(this.round===1?'Here we go!':`Round ${this.round}. Fight!`)}return}
-    if(this.phase!=='fight'){this.pt+=dt;for(const F of this.F){F.vx*=.85;if(F.act&&this.phase==='end')F.act=null}return}
+    if(this.phase!=='fight'){this.pt+=dt;for(const F of this.F){F.vx*=.85;F.vy*=.85;if(F.act&&this.phase==='end')F.act=null}return}
     this.clock-=dt*LV.TS;this.el+=dt*LV.TS;
     for(const F of this.F)this.updF(F,dt);
     if(this.phase!=='fight')return;
@@ -110,7 +123,7 @@ class LiveFight{
     F.lastAtkT+=dt;F.hitT+=dt;
     if(F.inv>0)F.inv-=dt;if(F.hurt>0)F.hurt-=dt;if(F.stag>0)F.stag-=dt*(F.block?1.7:1);if(F.stuff>0)F.stuff-=dt;if(F.dodge>0)F.dodge-=dt;if(F.open>0)F.open-=dt;if(F.dash>0)F.dash-=dt;F.chainT+=dt;if(F.fire>0){F.fire-=dt;if(F.fire<=0)this.say(`${F.name} cools off.`)}if(F.scrCD>0)F.scrCD-=dt;if(F.shootCD>0)F.shootCD-=dt;
     if(F.down>0){F.down-=dt;if(F.down<=0&&this.pos==='stand'){F.head=Math.min(F.headMax,F.head+10);F.inv=.5;F.stag=Math.max(F.stag,.8);this.say(`${F.name} beats the count and gets up.`)}}
-    const moving=Math.abs(F.vx)>2,busy=!!F.act;
+    const moving=Math.hypot(F.vx,F.vy)>2,busy=!!F.act;
     const reg=13*(.55+F.f.r.car/150)*(.7+.3*F.body/100)*(F.block?.55:1)*(moving?.75:1)*(busy?.3:1)*(this.pos==='ground'?.8:1)*(this.ct?.2:1);
     F.sta=clamp(F.sta+reg*dt,0,100);
     if(F.hitT>2.2&&F.down<=0){F.head=Math.min(F.headMax,F.head+dt*1.7);F.body=Math.min(100,F.body+dt*.45)}
@@ -123,9 +136,9 @@ class LiveFight{
   doAct(F,k){
     const a0=F.act;
     if(this.pos==='stand'&&a0&&a0.ph==='r'&&LCHAIN.has(a0.k)&&a0.t>.03&&F.down<=0&&F.hurt<=0&&F.stuff<=0&&!this.ct&&this.phase==='fight'&&F.o.down<=0){
-      const mv=this.keyMove(k,Math.abs(F.x-F.o.x),F);if(mv&&LSTRIKE.has(mv)){F.act=null;return this.startAct(F,mv,true)}}
+      const mv=this.keyMove(k,this.gap(F),F);if(mv&&LSTRIKE.has(mv)){F.act=null;return this.startAct(F,mv,true)}}
     if(!this.canAct(F)){if(!this.ct&&this.phase==='fight'){F.queue=k;F.qT=.24}return}
-    const O=F.o,gap=Math.abs(F.x-O.x);
+    const O=F.o,gap=this.gap(F);
     if(this.pos==='stand'){
       if(O.down>0){
         if((k==='K'||k==='Kc')&&this.ring&&gap<18)return this.startAct(F,'soccer');
@@ -179,10 +192,10 @@ class LiveFight{
   }
   stepAct(F,dt){const a=F.act;a.t+=dt;
     if(a.ph==='r'&&F.queue&&a.t>.03&&this.pos==='stand'&&LCHAIN.has(a.k)){const k=F.queue;F.queue=null;this.doAct(F,k);if(F.act!==a)return}
-    if(a.ph==='w'){if(a.m.lunge&&this.pos==='stand')F.vx=F.face*a.m.lunge;if(a.t>=a.dw){a.ph='a';a.t=0;if(a.k==='shoot')this.emit('whoosh',{x:F.x});else this.strike(F,a.m,a.k)}}
+    if(a.ph==='w'){if(a.m.lunge&&this.pos==='stand'){const u=this.u(F);this.push(F,u[0],u[1],a.m.lunge)}if(a.t>=a.dw){a.ph='a';a.t=0;if(a.k==='shoot')this.emit('whoosh',{F});else this.strike(F,a.m,a.k)}}
     else if(a.ph==='a'){
-      if(a.k==='shoot'&&!a.done){F.vx=F.face*84*(F.sta<20?.75:1);if(Math.abs(F.x-F.o.x)<=LV.MINGAP+1.5){a.done=true;F.vx=0;this.takedown(F,F.o);return}}
-      if(F.act&&a.t>=a.da){a.ph='r';a.t=0;if(a.k==='shoot'&&!a.done){F.vx=0;F.stuff=.3;F.o.sprawl=false;this.sprawlW=null;this.say(`${F.name} shoots from too far out.`)}}}
+      if(a.k==='shoot'&&!a.done){const u=this.u(F);this.push(F,u[0],u[1],84*(F.sta<20?.75:1));if(u[2]<=LV.MINGAP+1.5){a.done=true;F.vx=F.vy=0;this.takedown(F,F.o);return}}
+      if(F.act&&a.t>=a.da){a.ph='r';a.t=0;if(a.k==='shoot'&&!a.done){F.vx=F.vy=0;F.stuff=.3;F.o.sprawl=false;this.sprawlW=null;this.say(`${F.name} shoots from too far out.`)}}}
     else if(a.t>=a.dr)F.act=null;
   }
   onShoot(F){const O=F.o;O.sprawl=false;
@@ -192,22 +205,23 @@ class LiveFight{
     if(this.sprawlW&&this.sprawlW.side===F.side&&this.T<=this.sprawlW.until){F.sprawl=true;this.sprawlW=null;this.flash('Sprawl!')}
     else if(this.pos==='clinch'&&this.canAct(F))this.breakAttempt(F);
   }
-  dodge(F){if(this.pos!=='stand'||!this.canAct(F)||F.sta<6)return;F.dodge=.26;F.inv=.17;F.sta-=6;F.vx=-F.face*78;this.emit('whoosh',{x:F.x})}
+  dodge(F,side){if(this.pos!=='stand'||!this.canAct(F)||F.sta<6)return;F.dodge=.26;F.inv=.17;F.sta-=6;const u=this.u(F);
+    if(side){this.push(F,-u[1]*side,u[0]*side,74)}else this.push(F,-u[0],-u[1],78);this.emit('whoosh',{F})}
 
   /* ---------------- striking ---------------- */
   strike(A,m,k){const D=A.o;
     if(this.pos==='stand'){
-      const gap=Math.abs(A.x-D.x);
+      const gap=this.gap(A);
       if(k==='soccer'){if(!(D.down>0)||gap>m.rng)return this.whiff(A)}
       else{if(D.down>0)return this.whiff(A);
         const reach=m.rng*(1+(A.f.r.str-60)/700);if(gap>reach)return this.whiff(A);
-        if(D.inv>0){this.say(`${D.name} slips it.`);this.emit('whoosh',{x:D.x});return}}
+        if(D.inv>0){this.say(`${D.name} slips it.`);this.emit('whoosh',{F:D});return}}
     }
-    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?.93:1);
+    let dmg=m.dmg*(.55+A.f.r.pow/110)*(.62+.38*A.sta/100)*(this.pos==='stand'?1.02:1);
     if(!A.human&&D.human)dmg*=this.diff.dmg;
     const shooting=this.pos==='stand'&&D.act&&D.act.k==='shoot'&&D.act.ph!=='r'&&!D.act.done;
     if(shooting&&m.pow){ // timed a power shot or knee into a level change
-      D.act=null;D.vx=0;D.stuff=.7;this.sprawlW=null;A.sprawl=false;dmg*=1.35;
+      D.act=null;D.vx=D.vy=0;D.stuff=.7;this.sprawlW=null;A.sprawl=false;dmg*=1.35;
       this.say(k==='knee'?`Knee right down the middle as ${D.name} shoots!`:`${A.name} meets the shot with a ${m.nm}!`,true);
       if(A.human)this.flash('Counter!');return this.applyDmg(A,D,m,k,dmg,false,true)}
     const counter=!!(D.act&&D.act.ph==='w'&&D.act.m.dmg)||D.open>0;
@@ -219,7 +233,7 @@ class LiveFight{
     if(this.pos==='ground'&&this.g.top===A)dmg*=GMULT[this.g.pos];
     if(A.fire>0)dmg*=1.18;
     if(A.chainT<1.05&&A.chain>0)dmg*=1+Math.min(.3,A.chain*.07);
-    const pinned=this.pos==='stand'&&((D.x-LV.L<7&&A.x>D.x)||(LV.R-D.x<7&&A.x<D.x));if(pinned)dmg*=1.1;
+    const pinned=this.pos==='stand'&&this.pinned(A,D);if(pinned)dmg*=1.1;
     const canBlock=D.block&&!D.act&&D.down<=0&&k!=='soccer'&&!(D.open>0);
     if(canBlock){D.st.blocked++;this.idle=0;
       if(m.tgt==='legs'){A.legs=Math.max(0,A.legs-4);D.legs=Math.max(0,D.legs-1);this.emit('block',{x:D.x,y:-8,F:D});this.say(`${D.name} checks the leg kick.`);this.pts(D,1);return}
@@ -227,9 +241,9 @@ class LiveFight{
       return this.applyDmg(A,D,m,k,dmg,true,false)}
     this.applyDmg(A,D,m,k,dmg,false,counter)
   }
-  whiff(A){this.emit('whoosh',{x:A.x+A.face*10});const a=A.act;
+  whiff(A){this.emit('whoosh',{F:A});const a=A.act;
     if(a&&(a.m.risk||a.k==='over'||a.k==='hkick')){A.open=a.m.risk?.55:.35;A.sta=Math.max(0,A.sta-2);if(a.m.risk&&Math.random()<.5)this.say(`${A.name} misses the ${a.m.nm} and is wide open!`);if(A.human&&a.m.risk)this.flash("Missed! You're open")}}
-  dashIn(F){if(this.pos!=='stand'||!this.canAct(F)||F.sta<5||F.o.down>0)return;F.dash=.2;F.sta-=5;F.vx=F.face*92;this.emit('whoosh',{x:F.x})}
+  dashIn(F){if(this.pos!=='stand'||!this.canAct(F)||F.sta<5||F.o.down>0)return;F.dash=.2;F.sta-=5;const u=this.u(F);this.push(F,u[0],u[1],92);this.emit('whoosh',{F})}
   applyDmg(A,D,m,k,dmg,blocked,counter){
     if(m.tgt==='head'){dmg*=1.27-D.f.r.chn/110;D.head-=dmg;D.headMax=Math.max(30,D.headMax-dmg*.22)}
     else if(m.tgt==='body'){D.body=Math.max(0,D.body-dmg*(blocked?.5:.85));D.sta=Math.max(0,D.sta-dmg*.45);D.head-=dmg*.25}
@@ -243,12 +257,12 @@ class LiveFight{
     if(A.chain>=3)this.emit('combo',{n:A.chain,F:D,A});
     A.st.landed++;A.st[m.tgt]++;D.hitT=0;this.idle=0;this.pts(A,m.pts*(counter?1.4:1));
     const hy=m.tgt==='head'?-26:m.tgt==='body'?-17:-6;
-    this.emit('hit',{x:D.x-D.face*1,y:hy,big:!!m.pow,dmg,F:D,A,blood:m.pow&&dmg>6&&Math.random()<.35,tgt:m.tgt,k});
+    this.emit('hit',{y:hy,big:!!m.pow,dmg,F:D,A,blood:m.pow&&dmg>6&&Math.random()<.35,tgt:m.tgt,k});
     this.shake=Math.max(this.shake,m.pow?2.6:1);
     if(this.pos==='ground'){if(this.g.top===A)this.g.unans++;else this.g.unans=0}else{A.unans++;D.unans=0}
     if(D.act&&D.act.ph==='w'&&dmg>=3&&D.act.k!=='shoot')D.act=null;
-    const pinned=this.pos==='stand'&&((D.x-LV.L<7&&A.x>D.x)||(LV.R-D.x<7&&A.x<D.x));
-    if(this.pos==='stand'){D.hurt=Math.min(.34,.1+dmg*.02);D.x-=D.face*(m.pow?1.5:.8);D.kb=-D.face*(m.push||(3+dmg*1.5))*(pinned?.25:1);
+    const pinned=this.pos==='stand'&&this.pinned(A,D);
+    if(this.pos==='stand'){const u=this.u(A),kb=(m.push||(3+dmg*1.5))*(pinned?.25:1);D.hurt=Math.min(.34,.1+dmg*.02);D.x+=u[0]*(m.pow?1.5:.8);D.y+=u[1]*(m.pow?1.5:.8);D.kbx=u[0]*kb;D.kby=u[1]*kb;
       if(m.push&&D.act&&D.act.ph!=='r'&&D.act.k!=='shoot'){D.act=null;this.say(`${A.name} stops him with a teep.`)}
       if(pinned&&m.pow&&Math.random()<.25)this.say(`${A.name} has him pinned against the ${this.ring?'ropes':'fence'}!`)}
     if(counter&&A.human)this.flash('Counter!');
@@ -259,7 +273,7 @@ class LiveFight{
       return}
     if(m.pow){const ch=clamp((dmg-5.5)/55+(44-D.head)/125-(D.f.r.chn-60)/230+(counter?.05:0),0,.42);if(Math.random()<ch)return this.knockdown(A,D,m)}
     if(k==='soccer'&&D.head<32)return this.finish(A,'TKO (soccer kicks)');
-    if(D.head<34&&m.pow&&D.stag<=0){D.stag=1.1;D.kb=-D.face*40;this.say(`${D.name} is rocked!`,true);this.momentum(A,10);this.emit('rocked',{F:D});if(A.human)this.flash("He's rocked! Pour it on");else if(D.human)this.flash("You're rocked! Cover up")}
+    if(D.head<34&&m.pow&&D.stag<=0){D.stag=1.1;{const u=this.u(A);D.kbx=u[0]*40;D.kby=u[1]*40}this.say(`${D.name} is rocked!`,true);this.momentum(A,10);this.emit('rocked',{F:D});if(A.human)this.flash("He's rocked! Pour it on");else if(D.human)this.flash("You're rocked! Cover up")}
     if(k==='spin'&&dmg>9&&Math.random()<.18)return this.knockdown(A,D,m);
     if(D.stag>0&&D.head<10&&A.unans>=4)return this.finish(A,'TKO (punches)');
     if(m.tgt==='body'&&this.pos==='stand'){
@@ -270,10 +284,10 @@ class LiveFight{
   momentum(F,v){if(F.fire>0||this.phase!=='fight')return;F.mo=Math.min(100,F.mo+v);
     if(F.mo>=100){F.mo=0;F.fire=7;this.say(`${F.name} is on fire! The crowd is on its feet!`,true);this.emit('fire',{F});this.emit('crowd');if(F.human)this.flash("You're on fire!")}}
   knockdown(A,D,m,leg){
-    if(this.pos==='clinch'){this.pos='stand';D.x=A.x+A.face*12}
-    D.down=1.8;D.act=null;D.vx=0;D.block=false;D.kdR++;D.stag=0;
+    if(this.pos==='clinch'){const u=this.u(A);this.pos='stand';this.place(D,A.x+u[0]*12,A.y+u[1]*12,3)}
+    D.down=1.8;D.act=null;D.vx=D.vy=0;D.block=false;D.kdR++;D.stag=0;
     if(!leg){A.st.kd++;this.rkd[this.round-1][A.side]++;this.pts(A,12)}else this.pts(A,6);this.momentum(A,28);D.mo=0;
-    this.slow=.7;this.shake=5;this.emit('kd',{x:D.x});
+    this.slow=.7;this.shake=5;this.emit('kd',{F:D});
     this.say(leg?`${D.name}'s leg gives out and he goes down!`:`${A.name} drops ${D.name} with a ${m.nm}!`,true);this.banner('KNOCKDOWN');
     if(D.kdR>=3)this.finish(A,'TKO (three knockdowns)');
   }
@@ -284,41 +298,44 @@ class LiveFight{
     let p=.33+(A.f.r.wre-D.f.r.wre)/75+(counter?.25:0)+(D.sta<30?.1:0)-(A.sta<25?.15:0)-(spr?.42:0)+(D.stag>0?.15:0)-(this.ring?.03:0)-(D.block&&!spr?.08:0)+(A.tdTry>=3?-.05:0);
     p=clamp(p,.05,.9);D.sprawl=false;this.sprawlW=null;A.shootCD=4+Math.random()*3.5;A.tdTry=(A.tdTry||0)+1;
     if(Math.random()<p){this.toGround(A,D,A.f.r.wre>D.f.r.wre+8&&Math.random()<.4?'half':'guard');A.st.td++;this.pts(A,5);this.momentum(A,12);
-      this.emit('slam',{x:A.x});this.shake=3;this.say(counter?`${A.name} times the shot perfectly. Takedown!`:`Takedown ${A.name}!`,true)}
-    else{A.act=null;A.vx=0;A.stuff=spr?.85:.5;A.x-=A.face*(spr?2:4);this.pts(D,spr?2:1);this.emit('block',{x:D.x,y:-12,F:D});A.sta=Math.max(0,A.sta-(spr?6:2));
+      this.emit('slam',{F:D});this.shake=3;this.say(counter?`${A.name} times the shot perfectly. Takedown!`:`Takedown ${A.name}!`,true)}
+    else{const u=this.u(A);A.act=null;A.vx=A.vy=0;A.stuff=spr?.85:.5;A.x-=u[0]*(spr?2:4);A.y-=u[1]*(spr?2:4);this.pts(D,spr?2:1);this.emit('block',{x:D.x,y:-12,F:D});A.sta=Math.max(0,A.sta-(spr?6:2));
       if(spr){A.open=.7;this.fhl={side:D.side,until:this.T+.9};this.say(`${D.name} sprawls and stuffs the shot. He has the front headlock!`);if(D.human)this.flash('Stuffed! Shoot: go behind · Hold Power: guillotine')}
       else this.say(`${D.name} defends the takedown.`)}
   }
   clinch(F){const O=F.o,p=.62+(F.f.r.wre-O.f.r.wre)/120;F.sta-=4;
-    if(Math.random()<p){this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.queue=null}
-      const mid=clamp((F.x+O.x)/2,LV.L+5,LV.R-5);F.x=mid-F.face*4.5;O.x=mid+F.face*4.5;
-      this.say(Math.min(mid-LV.L,LV.R-mid)<20?`${F.name} pins him against the ${this.ring?'ropes':'fence'}.`:`${F.name} ties him up in the clinch.`)}
+    if(Math.random()<p){this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=X.vy=0;X.block=false;X.queue=null}
+      const mid=this.clinchSet(F,O);
+      this.say(this.fenceDist(mid)<14?`${F.name} pins him against the ${this.ring?'ropes':'fence'}.`:`${F.name} ties him up in the clinch.`)}
     else{F.stuff=.3;this.say(`${O.name} shrugs off the clinch.`)}}
   breakAttempt(F){const p=.5+(F.f.r.wre-F.o.f.r.wre)/90;F.sta-=3;
     if(Math.random()<p)this.breakClinch(`${F.name} breaks away.`);else{F.stuff=.35;this.say(`${F.o.name} keeps him tied up.`)}}
-  breakClinch(msg){this.pos='stand';this.idle=0;const [a,b]=this.F,mid=(a.x+b.x)/2;
-    a.x=clamp(mid-a.face*8,LV.L,LV.R);b.x=clamp(mid-b.face*8,LV.L,LV.R);for(const X of this.F){X.act=null;X.inv=.25}this.say(msg)}
+  clinchSet(F,O){const u=this.u(F),mid={x:(F.x+O.x)/2,y:(F.y+O.y)/2};this.clampIn(mid,5);F.x=mid.x-u[0]*4.5;F.y=mid.y-u[1]*4.5;O.x=mid.x+u[0]*4.5;O.y=mid.y+u[1]*4.5;return mid}
+  breakClinch(msg){this.pos='stand';this.idle=0;const [a,b]=this.F,u=this.u(a),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    this.place(a,mx-u[0]*8,my-u[1]*8);this.place(b,mx+u[0]*8,my+u[1]*8);for(const X of this.F){X.act=null;X.inv=.25}this.say(msg)}
   catchKick(F,O){const a=O.act,head=a.k==='hkick';F.sta-=5;F.block=false;
     let p=.5+(F.f.r.wre-O.f.r.wre)/90+(F.f.r.str-O.f.r.str)/200-(head?.18:0)+(a.ph==='a'?.08:0);p=clamp(p,.15,.85);
-    if(Math.random()<p){O.act=null;O.vx=0;F.st.tda++;
-      if(Math.random()<.62+(F.f.r.wre-60)/150){this.toGround(F,O,Math.random()<.35?'half':'guard');F.st.td++;this.pts(F,5);this.emit('slam',{x:F.x});this.shake=3;this.say(`${F.name} catches the kick and dumps ${O.name}!`,true)}
+    if(Math.random()<p){O.act=null;O.vx=O.vy=0;F.st.tda++;
+      if(Math.random()<.62+(F.f.r.wre-60)/150){this.toGround(F,O,Math.random()<.35?'half':'guard');F.st.td++;this.pts(F,5);this.emit('slam',{F:O});this.shake=3;this.say(`${F.name} catches the kick and dumps ${O.name}!`,true)}
       else{O.open=.6;O.stuff=.5;this.pts(F,2);this.say(`${F.name} catches the kick! ${O.name} is hopping on one leg.`);if(F.human)this.flash('Caught it! Hit him')}}
     else{F.stuff=.35;this.say(`${O.name} pulls the kick back in time.`)}}
-  frontHeadlock(F,kind){const O=F.o;this.fhl=null;O.act=null;O.vx=0;
-    this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.queue=null}
-    const mid=clamp((F.x+O.x)/2,LV.L+5,LV.R-5);F.x=mid-F.face*4.5;O.x=mid+F.face*4.5;
+  frontHeadlock(F,kind){const O=F.o;this.fhl=null;O.act=null;O.vx=O.vy=0;
+    this.pos='clinch';this.idle=0;for(const X of this.F){X.act=null;X.vx=X.vy=0;X.block=false;X.queue=null}
+    this.clinchSet(F,O);
     this.contest(kind,F,O)}
   refGround(dt){const g=this.g;if(!g)return;g.lull=(g.lull||0)+dt;
     const hurt=g.bot.head<38,cap=(g.pos==='guard'?9:g.pos==='half'?11:14)+(hurt?5:0);
     if(g.lull>2.6&&!g.warn){g.warn=1;this.say(`Referee: "Work! Improve your position!"`)}
     if(g.lull>4.2)return this.standUp('Nothing happening. The referee stands them up.','ref');
     if(g.t>cap)return this.standUp('Stalemate on the mat. The referee brings them back up.','ref')}
-  toGround(top,bot,pos){this.pos='ground';this.idle=0;this.g={top,bot,pos,unans:0,leave:0,pounce:false,lull:0,mom:0,t:0,all:0};
-    for(const X of this.F){X.act=null;X.vx=0;X.block=false;X.down=0;X.queue=null;X.stag=0}
-    const mid=clamp(bot.x,LV.L+16,LV.R-16);bot.x=mid;top.x=mid}
+  toGround(top,bot,pos){const ub=this.u(bot);this.pos='ground';this.idle=0;this.g={top,bot,pos,unans:0,leave:0,pounce:false,lull:0,mom:0,t:0,all:0,fx:[ub[0],ub[1]]};
+    for(const X of this.F){X.act=null;X.vx=X.vy=0;X.kbx=X.kby=0;X.block=false;X.down=0;X.queue=null;X.stag=0}
+    this.clampIn(bot,15);top.x=bot.x;top.y=bot.y}
   pounce(F){const O=F.o;O.head=Math.min(O.headMax,O.head+8);this.toGround(F,O,Math.random()<.45?'guard':Math.random()<.5?'side':'mount');this.g.pounce=true;this.say(`${F.name} pounces on him!`,true)}
-  standUp(msg,why){this.lastStand=why||'other';for(const X of this.F)X.shootCD=Math.max(X.shootCD,2.5+Math.random()*2.5);this.pos='stand';this.g=null;this.idle=0;this.fhl=null;const [a,b]=this.F,mid=clamp((a.x+b.x)/2,LV.L+10,LV.R-10);
-    a.x=mid-9;b.x=mid+9;a.face=1;b.face=-1;for(const X of this.F){X.act=null;X.inv=.3;X.down=0;X.vx=0}this.say(msg)}
+  standUp(msg,why){this.lastStand=why||'other';for(const X of this.F)X.shootCD=Math.max(X.shootCD,2.5+Math.random()*2.5);
+    const [a,b]=this.F,g=this.g,v=g&&g.fx?(g.bot===a?g.fx:[-g.fx[0],-g.fx[1]]):this.axis,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};this.clampIn(mid,10);
+    this.pos='stand';this.g=null;this.ct=null;this.idle=0;this.fhl=null;this.place(a,mid.x-v[0]*9,mid.y-v[1]*9);this.place(b,mid.x+v[0]*9,mid.y+v[1]*9);
+    for(const X of this.F){X.act=null;X.inv=.3;X.down=0;X.vx=X.vy=0}this.say(msg)}
 
   contest(kind,A,D){
     if(!A.human&&this.T-this.ctEnd<LV.BREATH*(D.human?1:.5))return;
@@ -363,7 +380,7 @@ class LiveFight{
       case'sweep':A.scrCD=.8;if(win){g.top=A;g.bot=D;g.pos='half';g.t=0;g.unans=0;g.pounce=false;g.mom=0;this.pts(A,4);this.say(`Sweep! ${A.name} reverses the position.`,true)}else{g.mom=Math.min(.16,(g.mom||0)+.025);this.say(`${D.name} stays on top.`)}break;
       case'escape':A.scrCD=.8;if(win){g.pos={half:'guard',side:'half',mount:'half',back:'guard'}[g.pos]||'guard';g.unans=0;g.t=Math.min(g.t,4);g.mom=Math.min(.16,(g.mom||0)+.02);this.pts(A,2);this.say(`${A.name} recovers ${GPN[g.pos]}.`)}else{g.mom=Math.min(.16,(g.mom||0)+.025);this.say(`${D.name} holds him down.`)}break;
       case'getup':A.scrCD=1;if(win){this.pts(A,2);this.standUp(`${A.name} scrambles back to his feet.`,'getup')}else{g.mom=Math.min(.16,(g.mom||0)+.03);this.say(`${D.name} drags him back down.`)}break;
-      case'snap':if(win){this.toGround(A,D,Math.random()<.4?'back':'side');A.st.td++;this.pts(A,5);this.emit('slam',{x:A.x});this.shake=2;this.say(`${A.name} spins behind and takes ${GPN[this.g.pos]}!`,true)}
+      case'snap':if(win){this.toGround(A,D,Math.random()<.4?'back':'side');A.st.td++;this.pts(A,5);this.emit('slam',{F:D});this.shake=2;this.say(`${A.name} spins behind and takes ${GPN[this.g.pos]}!`,true)}
         else this.breakClinch(`${D.name} pops his head out.`);break;
       case'guil':if(win)return this.finish(A,'Submission (guillotine)');
         this.toGround(D,A,'guard');this.say(`${D.name} pops his head free and lands on top!`,true);break;
@@ -373,7 +390,7 @@ class LiveFight{
         else if(g.top===A){const r=Math.random();g.mom=Math.min(.16,(g.mom||0)+.04);  // over-committing on top opens scrambles
           if(r<.3&&(g.pos==='mount'||g.pos==='side')){g.top=D;g.bot=A;g.pos='guard';g.t=0;g.unans=0;this.pts(D,3);this.say(`${D.name} rolls through and ends up on top!`,true)}
           else if(r<.55){this.pts(D,2);return this.standUp(`${D.name} escapes out the back and stands up!`,'getup')}}break;
-      case'trip':case'lock':if(win){this.toGround(A,D,c.kind==='lock'&&A.f.r.wre>D.f.r.wre?'half':'guard');A.st.td++;this.pts(A,5);this.emit('slam',{x:A.x});this.shake=3;this.say(`${A.name} ${c.kind==='trip'?'trips him to the mat':'locks the body and takes him down'}!`,true)}
+      case'trip':case'lock':if(win){this.toGround(A,D,c.kind==='lock'&&A.f.r.wre>D.f.r.wre?'half':'guard');A.st.td++;this.pts(A,5);this.emit('slam',{F:D});this.shake=3;this.say(`${A.name} ${c.kind==='trip'?'trips him to the mat':'locks the body and takes him down'}!`,true)}
         else{this.say(`${D.name} defends the takedown.`);if(Math.random()<.35)this.breakClinch(`They break apart.`)}break;
     }
   }
@@ -387,19 +404,19 @@ class LiveFight{
     while(this.taps.length){const k=this.taps.shift();
       if(this.ct){if(k!=='L'&&k!=='R'&&k!=='dodge')this.tap(F);continue}
       if(this.T-this.ctEnd<LV.TAPGRACE)continue;
-      if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k==='dash')this.dashIn(F);else if(k!=='L'&&k!=='R')this.doAct(F,this.dirKey(F,k))}
+      if(k==='B')this.pressB(F);else if(k==='dodge')this.dodge(F);else if(k==='slipL')this.dodge(F,-1);else if(k==='slipR')this.dodge(F,1);else if(k==='dash')this.dashIn(F);else if(k!=='L'&&k!=='R')this.doAct(F,this.dirKey(F,k))}
     if(this.pos==='ground'&&this.g.top===F&&!this.ct){
-      this.g.leave=this.inp.dir!==0?this.g.leave+dt:0;
+      this.g.leave=Math.hypot(this.inp.wx,this.inp.wy)>.5?this.g.leave+dt:0;
       if(this.g.leave>.4)this.standUp(`${F.name} stands up and lets him back up.`,'topstand')}
   }
   // stick direction turns the strike buttons into different moves while standing
-  dirKey(F,k){if(this.pos!=='stand'||F.o.down>0||(this.fhl&&this.fhl.side===F.side))return k;const d=this.inp.dir,fw=d&&Math.sign(d)===F.face,bk=d&&Math.sign(d)===-F.face;
+  dirKey(F,k){if(this.pos!=='stand'||F.o.down>0||(this.fhl&&this.fhl.side===F.side))return k;const d=this.rel(F),fw=d>.5,bk=d<-.5;
     if(k==='P'&&bk)return'Pb';if(k==='Pc'&&fw)return'Pfc';if(k==='K'&&fw)return'Kf';if(k==='K'&&bk)return'Kb';if(k==='Kc'&&fw)return'Kfc';return k}
   aiCtl(F,dt){const A=F.ai,O=F.o,D=this.aiD(F),st=LSTYLE[F.f.style]||LSTYLE['All-rounder'];
     A.t-=dt;const wasB=F.block;if(A.blockT>0){A.blockT-=dt;F.block=!F.act&&F.down<=0&&!this.ct&&(this.pos!=='ground'||this.g.bot===F)}else F.block=false;
     if(F.block&&!wasB)F.blockT0=this.T-(Math.random()<.78?.3:0);
     if(this.ct)return;
-    if(this.pos==='stand'&&A.combo>0&&F.act&&F.act.ph==='r'&&LCHAIN.has(F.act.k)&&F.act.t>.04){A.combo--;const gap=Math.abs(F.x-O.x),c=pick(gap<13?['cross','hook','upper','body','hook']:['jab','cross','lkick','bkick','cross']);if(gap<=LMV[c].rng+1)this.doAct(F,c);else A.combo=0}
+    if(this.pos==='stand'&&A.combo>0&&F.act&&F.act.ph==='r'&&LCHAIN.has(F.act.k)&&F.act.t>.04){A.combo--;const gap=this.gap(F),c=pick(gap<13?['cross','hook','upper','body','hook']:['jab','cross','lkick','bkick','cross']);if(gap<=LMV[c].rng+1)this.doAct(F,c);else A.combo=0}
     if(this.pos==='stand'&&this.fhl&&this.fhl.side===F.side&&this.canAct(F)&&Math.random()<dt*4){const r=Math.random(),gr=F.f.r.grp/70;
       this.doAct(F,r<.3*gr?'Pc':r<.75?'S':'K');return}
     if(this.pos==='stand'&&O.act&&O.act.ph==='w'&&(O.act.m.dmg||O.act.k==='shoot')&&A.seen!==O.act){A.seen=O.act;A.react=D.react*(.8+Math.random()*.5)}
@@ -408,15 +425,16 @@ class LiveFight{
     if(A.t>0)return;A.t=D.think*(.7+Math.random()*.6)*(this.pos==='ground'?1.5:1);
     if(this.pos==='stand')this.aiStand(F,O,D,st);else if(this.pos==='clinch')this.aiClinch(F,O,D,st);else this.aiGround(F,O,D,st);
   }
-  aiReact(F,O,D){const gap=Math.abs(F.x-O.x);if(gap>(O.act.m.rng||12)+4)return;
+  aiReact(F,O,D){const gap=this.gap(F);if(gap>(O.act.m.rng||12)+4)return;
     if(O.act.k==='shoot'){if(this.canAct(F)&&gap<22&&Math.random()<D.block*.35*(.6+F.f.r.str/200))this.doAct(F,Math.random()<.5?'P':'Pc');return}
     if(O.act.m.kick&&this.canAct(F)&&Math.random()<D.block*.22*(F.f.r.wre/70)){this.doAct(F,'S');return}
     const r=Math.random(),pb=D.block*(.6+F.f.r.str/250);
     if(r<pb){F.ai.blockT=.42;F.block=true}
     else if(r<pb+.12&&this.canAct(F))this.dodge(F);
     else if(r<pb+.22&&this.canAct(F)&&gap<18)this.doAct(F,'J')}
-  aiStand(F,O,D,st){const gap=Math.abs(F.x-O.x),A=F.ai;
-    if(O.down>0){if(Math.random()<st.ag*D.ag+.2){A.dir=1;if(gap<16)this.doAct(F,this.ring&&Math.random()<.2?'K':(Math.random()<.5?'S':'P'))}else A.dir=0;return}
+  aiStand(F,O,D,st){const gap=this.gap(F),A=F.ai;
+    A.lat=this.aiLat(F,O,st,A);
+    if(O.down>0){A.lat=0;if(Math.random()<st.ag*D.ag+.2){A.dir=1;if(gap<16)this.doAct(F,this.ring&&Math.random()<.2?'K':(Math.random()<.5?'S':'P'))}else A.dir=0;return}
     if(F.sta<22){A.dir=-1;A.blockT=.5;return}
     if(gap>22&&gap<34&&Math.random()<.07*st.ag&&this.canAct(F)){this.dashIn(F);return}
     const want=st.want+(O.stag>0?-4:0)+(F.legs<40?2:0);
@@ -426,13 +444,19 @@ class LiveFight{
     const opts=[];for(const [k,w] of Object.entries(st.w)){if(!w)continue;
       if(k==='shoot'){if(gap>=12&&gap<=27&&F.shootCD<=0)opts.push([k,w*(O.block?1.6:1)*(F.tdTry>=4?.6:1)])}
       else if(k==='clinch'){if(gap<12)opts.push([k,w*3])}
-      else if(gap<=LMV[k].rng+1)opts.push([k,w*(LMV[k].tgt==='body'&&O.block?2.6:1)*(k==='teep'&&Math.sign(O.vx)===O.face&&Math.abs(O.vx)>4?2.2:1)*(k==='superman'&&gap<14?.2:1)])}
+      else if(gap<=LMV[k].rng+1)opts.push([k,w*(LMV[k].tgt==='body'&&O.block?2.6:1)*(k==='teep'&&(()=>{const u=this.u(O);return O.vx*u[0]+O.vy*u[1]>4})()?2.2:1)*(k==='superman'&&gap<14?.2:1)])}
     if(!opts.length){A.dir=1;return}
     let tot=opts.reduce((s,o)=>s+o[1],0),x=Math.random()*tot,ch=opts[0][0];for(const [k,w] of opts){x-=w;if(x<0){ch=k;break}}
     const key={jab:'J',cross:'P',hook:'P',over:'Pc',lkick:'K',hkick:'Kc',shoot:'S',clinch:'S',upper:'U',body:'Pb',superman:'Pfc',bkick:'Kf',teep:'Kb',spin:'Kfc'}[ch];
     this.doAct(F,key);
     if(LCHAIN.has(ch)&&Math.random()<(st.cmb||.4)*(F.sta>40?1:.5))A.combo=1+(Math.random()<.45?1:0)+(Math.random()<.2?1:0);
     if(O.open>0&&this.canAct(F)&&Math.random()<.45)this.doAct(F,Math.random()<.5?'P':'K')}
+  // lateral movement: circle off the fence, cut the cage off on a fighter who's stuck on it, otherwise circle by style
+  aiLat(F,O,st,A){const u=this.u(F),px=-u[1],py=u[0],me=this.fenceDist(F),him=this.fenceDist(O);
+    if(me<11&&F.sta>20){const cx=-F.x,cy=-F.y;return (px*cx+py*cy)>=0?1:-1}
+    if(him<12&&(F.f.style==='Brawler'||F.f.style==='Wrestler'||st.ag>.6))return 0;
+    A.latT-=.3;if(A.latT<=0){A.latT=1.2+Math.random()*2.5;const circ={Striker:.75,Kickboxer:.7,'All-rounder':.55,BJJ:.4,Wrestler:.3,Brawler:.25}[F.f.style]||.5;A.latDir=Math.random()<circ?(Math.random()<.5?-1:1):0}
+    return A.latDir||0}
   aiClinch(F,O,D,st){const r=Math.random(),wr=F.f.style==='Wrestler'||F.f.style==='BJJ';
     if(F.sta<18){this.breakAttempt(F);return}
     if(r<.36)this.doAct(F,'P');else if(r<.64)this.doAct(F,'J');
@@ -461,20 +485,20 @@ class LiveFight{
   physics(dt){const [a,b]=this.F;
     if(this.pos==='stand'){
       for(const F of this.F){
-        if(F.down>0||(F.act&&F.act.k==='shoot'&&F.act.ph==='a'&&!F.act.done)||(F.act&&F.act.m.lunge&&F.act.ph==='w')||F.dodge>0||F.dash>0){F.vx*=F.down>0?.8:1;continue}
-        const dir=F.human?this.inp.dir:(F.ai.dir||0)*F.face;
+        if(F.down>0||(F.act&&F.act.k==='shoot'&&F.act.ph==='a'&&!F.act.done)||(F.act&&F.act.m.lunge&&F.act.ph==='w')||F.dodge>0||F.dash>0){if(F.down>0){F.vx*=.8;F.vy*=.8}continue}
+        const u=this.u(F);let mx,my;
+        if(F.human){mx=this.inp.wx;my=this.inp.wy}
+        else{const d=F.ai.dir||0,l=F.ai.lat||0;mx=u[0]*d-u[1]*l*.8;my=u[1]*d+u[0]*l*.8;const m=Math.hypot(mx,my);if(m>1){mx/=m;my/=m}}
         let sp=F.mv*(.55+.45*F.legs/100)*(F.block?.5:1)*(F.stag>0?.6:1)*(F.act?.25:1)*(F.sta<15?.7:1)*(F.hurt>0?.3:1);
-        if(dir&&Math.sign(dir)!==F.face)sp*=.85;
-        F.vx+=(dir*sp-F.vx)*Math.min(1,dt*14)}
-      for(const F of this.F){F.x=clamp(F.x+(F.vx+F.kb)*dt,LV.L,LV.R);F.kb*=Math.exp(-dt*7);if(Math.abs(F.kb)<1)F.kb=0}
-      let gap=b.x-a.x;const s=a.face;
-      if(gap*s<LV.MINGAP){const need=LV.MINGAP-gap*s;a.x-=s*need/2;b.x+=s*need/2;
-        if(a.x<LV.L||a.x>LV.R){a.x=clamp(a.x,LV.L,LV.R);b.x=a.x+s*LV.MINGAP}
-        if(b.x<LV.L||b.x>LV.R){b.x=clamp(b.x,LV.L,LV.R);a.x=b.x-s*LV.MINGAP}}
-      if(a.down<=0&&b.down<=0){a.face=b.x>=a.x?1:-1;b.face=-a.face}
-    }else if(this.pos==='clinch'){const mid=(a.x+b.x)/2;a.x=mid-a.face*4.5;b.x=mid+a.face*4.5;a.vx=b.vx=0}
-    else{a.vx=b.vx=0}
-    if(this.pos!=='stand')for(const F of this.F)F.kb=0;
+        const fw=mx*u[0]+my*u[1];if(fw<-.2)sp*=.85;
+        F.vx+=(mx*sp-F.vx)*Math.min(1,dt*14);F.vy+=(my*sp-F.vy)*Math.min(1,dt*14)}
+      for(const F of this.F){F.x+=(F.vx+F.kbx)*dt;F.y+=(F.vy+F.kby)*dt;const k=Math.exp(-dt*7);F.kbx*=k;F.kby*=k;if(Math.hypot(F.kbx,F.kby)<1)F.kbx=F.kby=0;this.clampIn(F,2)}
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1e-6,ux=dx/d,uy=dy/d;
+      if(d<LV.MINGAP){const need=(LV.MINGAP-d)/2;a.x-=ux*need;a.y-=uy*need;b.x+=ux*need;b.y+=uy*need;this.clampIn(a,2);this.clampIn(b,2)}
+      if(a.down<=0&&b.down<=0&&d>1)this.axis=[ux,uy];
+    }else if(this.pos==='clinch'){const u=this.u(a),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;a.x=mx-u[0]*4.5;a.y=my-u[1]*4.5;b.x=mx+u[0]*4.5;b.y=my+u[1]*4.5;a.vx=a.vy=b.vx=b.vy=0}
+    else{a.vx=a.vy=b.vx=b.vy=0}
+    if(this.pos!=='stand')for(const F of this.F)F.kbx=F.kby=0;
   }
 
   /* ---------------- rounds and results ---------------- */
@@ -489,9 +513,9 @@ class LiveFight{
     this.phase='break';this.pt=0;this.say(`End of round ${this.round}.`)}
   nextRound(){if(this.phase!=='break')return;
     for(const F of this.F){F.head=Math.min(F.headMax,F.head+18);F.sta=Math.min(100,F.sta+50);F.body=Math.min(100,F.body+10);F.legs=Math.min(100,F.legs+8);
-      F.act=null;F.queue=null;F.down=0;F.stag=0;F.hurt=0;F.kdR=0;F.unans=0;F.block=false;F.vx=0;F.kb=0;F.fire=0;F.chain=0;F.mo*=.5}
+      F.act=null;F.queue=null;F.down=0;F.stag=0;F.hurt=0;F.kdR=0;F.unans=0;F.block=false;F.vx=F.vy=0;F.kbx=F.kby=0;F.fire=0;F.chain=0;F.mo*=.5}
     this.round++;this.clock=this.rounds[this.round-1]*60;this.el=0;this.rp.push([0,0]);this.rkd.push([0,0]);this.log.push([]);
-    this.pos='stand';this.g=null;this.ct=null;this.idle=0;this.fhl=null;this.lastStand='round';for(const F of this.F){F.tdTry=0;F.open=0}const [a,b]=this.F;a.x=LV.W/2-15;b.x=LV.W/2+15;a.face=1;b.face=-1;
+    this.pos='stand';this.g=null;this.ct=null;this.idle=0;this.fhl=null;this.lastStand='round';for(const F of this.F){F.tdTry=0;F.open=0}const [a,b]=this.F;a.x=-15;a.y=0;b.x=15;b.y=0;this.axis=[1,0];
     this.phase='intro';this.pt=0}
   decision(){const v=this.cards.map(c=>c[0]>c[1]?0:c[1]>c[0]?1:-1),a=v.filter(x=>x===0).length,b=v.filter(x=>x===1).length;let w,m;
     if(a===3||b===3){w=a===3?0:1;m='Unanimous decision'}else if((a===2&&b===1)||(b===2&&a===1)){w=a>b?0:1;m='Split decision'}
@@ -503,7 +527,7 @@ class LiveFight{
   finish(W,method){if(this.phase==='end')return;this.phase='end';this.pt=0;this.slow=1.1;this.ct=null;
     const L=W.o;W.win=true;L.lost=true;if(/KO/.test(method))L.down=999;
     this.banner(/^Sub/.test(method)?'TAP OUT':/^KO/.test(method)?'KNOCKOUT':'TKO');
-    this.say(`${W.name} wins by ${method}!`,true);this.emit('kd',{x:L.x});this.emit('crowd');
+    this.say(`${W.name} wins by ${method}!`,true);this.emit('kd',{F:L});this.emit('crowd');
     this.res=this.result(W.side,method,true)}
   result(w,method,fin){const rd=this.round,el=Math.min(this.el,this.rounds[rd-1]*60);
     return{w,method,rd,time:fin?`${Math.floor(el/60)}:${String(Math.floor(el%60)).padStart(2,'0')}`:`${this.rounds[rd-1]}:00`,
