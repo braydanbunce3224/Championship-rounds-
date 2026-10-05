@@ -28,7 +28,7 @@ Every fight can be played live in a side-on pixel-art arena:
 - On fight night, fight it yourself or pick a gameplan and simulate it round by round. Call out rivals, chase belts, negotiate contracts, and retire with a legacy score.
 
 ### Quick Fight
-- Pick your style and an opponent, choose the arena, rounds and difficulty, and fight.
+- Pick any fighter for either corner: the real TFC, GFL and RYUJIN rosters (including Lane "Too Far" Johnson and Eric "The Machine" Duncle), fighters from your saved game including your own career fighter, or a custom fighter built from a style. Then choose the arena, rounds and difficulty, and fight.
 
 ### Matchmaker
 - Run one of three promotions while the other two run as AI rivals:

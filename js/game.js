@@ -802,11 +802,50 @@ function diffSeg(act){const cur=lsGet('cr.diff','normal');return `<div class="se
 const QARENA=[['TFC','TFC',false],['GFL','GFL',false],['RYU','RYUJIN',true],['REG','Gym',false]];
 function quickFighter(style,side){const nat=pick(Object.keys(NAT)),mod=STYLES[style],r={};
   for(const k of Object.keys(RATING_LBL))r[k]=clamp(Math.round(72+(mod[k]||0)*.8+rnd(-4,4)),45,95);
-  return{id:'q'+side+Math.floor(Math.random()*1e6),first:pick(NAT[nat].f),last:pick(NAT[nat].l),nat,style,r,ovr:ovrOf(r),div:'MW'}}
-function qfInit(){const q=U.qf||(U.qf={my:'Striker',op:'random',arena:'TFC',rounds:3});
-  if(!q.a||q.a.style!==q.my)q.a=quickFighter(q.my,0);
-  const os=q.op==='random'?pick(Object.keys(STYLES)):q.op;if(!q.b||(q.op!=='random'&&q.b.style!==q.op))q.b=quickFighter(os,1);return q}
+  return{id:'q'+side+Math.floor(Math.random()*1e6),src:'custom',first:pick(NAT[nat].f),last:pick(NAT[nat].l),nick:'',nat,style,r,ovr:ovrOf(r),div:(U.qf&&U.qf.a&&U.qf.a.div)||'MW',w:0,l:0,d:0}}
+/* ---- quick fight: pick real fighters ---- */
+// a fixed built-in roster (same every time) so quick fight works without a save
+let QROSTER=null;
+function qRoster(){if(QROSTER)return QROSTER;const out=[],seen=new Set(SIGNATURE.map(t=>t.first+t.last));
+  for(const pid in PROMOS)for(const div of DIVS)for(let i=0;i<4;i++){const rng=seeded(hash('qr',pid,div,i)),P=PROMOS[pid];
+    const pool=P.pool,ks=Object.keys(pool),tot=ks.reduce((a,k)=>a+pool[k],0);let x=rng()*tot,nat=ks[0];for(const k of ks){x-=pool[k];if(x<0){nat=k;break}}
+    const style=pickr(rng,STYLE_W[pid]),mod=STYLES[style],tier=[86,82,79,76][i]-(pid==='TFC'?0:2),r={};
+    for(const k of Object.keys(RATING_LBL))r[k]=clamp(Math.round(tier+(mod[k]||0)*.8+(rng()-.5)*8),45,97);
+    const w=10+Math.floor(rng()*12)-i,l=Math.floor(rng()*4)+i;
+    let first,last,tries=0;do{first=pickr(rng,NAT[nat].f);last=pickr(rng,NAT[nat].l)}while(seen.has(first+last)&&++tries<30);seen.add(first+last);
+    out.push({id:`q:${pid}:${div}:${i}`,first,last,nick:rng()<.5?pickr(rng,NICKS):'',nat,style,r,ovr:ovrOf(r),div,promo:pid,w,l,d:0,champ:i===0})}
+  for(const t of SIGNATURE){const slot=out.findIndex(f=>f.promo===t.promo&&f.div===t.div&&!f.sig&&(t.champ?f.champ:!f.champ));
+    const f={id:'q:sig:'+t.last,first:t.first,last:t.last,nick:t.nick,nat:t.nat,style:t.style,r:{...t.r},ovr:ovrOf(t.r),div:t.div,promo:t.promo,w:t.w,l:t.l,d:t.d,champ:!!t.champ,sig:true};
+    if(slot>=0)out[slot]=f;else out.push(f)}
+  return QROSTER=out}
+// fighters from the player's saved game (without loading it), including their career fighter
+function qSave(){if(qSave.c&&qSave.t>Date.now()-4000)return qSave.c;let L=[];try{const sv=load();if(sv&&sv.F){
+    const champs=new Set();for(const p in sv.promos||{})for(const d in sv.promos[p].champs)champs.add(sv.promos[p].champs[d]);
+    L=Object.values(sv.F).filter(f=>f.r&&DIVS.includes(f.div)&&(f.promo!=='REG'||f.id==='me')).map(f=>({id:'s:'+f.id,first:f.first,last:f.last,nick:f.nick||'',nat:f.nat,style:f.style,r:{...f.r},ovr:ovrOf(f.r),div:f.div,promo:f.promo,w:f.w,l:f.l,d:f.d,champ:champs.has(f.id),me:f.id==='me'}))
+      .sort((a,b)=>(b.me?1:0)-(a.me?1:0)||b.ovr-a.ovr)}}catch(e){}
+  qSave.c=L;qSave.t=Date.now();return L}
+function qFind(id){return qRoster().find(f=>f.id===id)||qSave().find(f=>f.id===id)||null}
+function qCopy(f){return{...f,r:{...f.r},src:f.id,id:f.id+':'+Math.floor(Math.random()*1e6)}}
+function qfInit(){const q=U.qf||(U.qf={arena:'TFC',rounds:3,pick:null,src:'TFC',pdiv:'all'});
+  if(!q.a){const lane=qRoster().find(f=>f.last==='Johnson'&&f.first==='Lane');q.a=qCopy(lane||qRoster()[0])}
+  if(!q.b)q.b=qRandomOpp(q.a);return q}
+function qRandomOpp(a){const di=DIVS.indexOf(a.div),pool=qRoster().filter(f=>DIVS.indexOf(f.div)===di&&f.first+f.last!==a.first+a.last);return qCopy(pick(pool.length?pool:qRoster()))}
+function qPicker(q){const side=q.pick,cur=side==='a'?q.a:q.b,save=qSave(),srcs=[...Object.keys(PROMOS).map(k=>[k,PROMOS[k].short]),...(save.length?[['save','My save']]:[]),['custom','Custom']];
+  if(!srcs.some(x=>x[0]===q.src))q.src='TFC';
+  const seg=(k,opts,act)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${String(q[k])===String(v)?'on':''}" data-act="${act}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  let list='';
+  if(q.src==='custom'){list=`<p class="hint">Build a fighter from a style. Ratings are rolled fresh each time.</p><div class="seg g3">${Object.keys(STYLES).map(st=>`<button data-act="qstyle" data-v="${st}">${st}</button>`).join('')}</div>`}
+  else{let L=q.src==='save'?save:qRoster().filter(f=>f.promo===q.src);if(q.pdiv!=='all')L=L.filter(f=>f.div===q.pdiv);
+    if(q.src!=='save')L=L.slice().sort((a,b)=>DIVS.indexOf(a.div)-DIVS.indexOf(b.div)||(b.champ?1:0)-(a.champ?1:0)||b.ovr-a.ovr);
+    L=L.slice(0,80);
+    list=L.length?`<div class="list">${L.map(f=>`<button class="frow${cur&&cur.src===f.id?' best':''}" data-act="qchoose" data-v="${esc(f.id)}"><span class="rk${f.champ?' c':''}">${f.champ?'C':f.me?'★':f.div}</span><span style="min-width:0"><div class="nm">${esc(fname(f))}${f.nick?` <span class="lbl" style="color:var(--acc)">“${esc(f.nick)}”</span>`:''}</div><div class="sub"><span>${f.w}-${f.l}${f.d?'-'+f.d:''}</span><span>${f.style}</span><span>${DIVN[f.div]}</span>${q.src==='save'&&PROMOS[f.promo]?`<span>${PROMOS[f.promo].short}</span>`:''}${f.me?'<span class="tag acc">Your fighter</span>':''}</div></span><span class="ovr num">${f.ovr}<small>OVR</small></span></button>`).join('')}</div>`:'<div class="empty">No fighters here.</div>'}
+  return `<main class="view notop" id="view"><div><button class="btn ghost sm" data-act="qcancel">${svg(BACK)} Back</button></div>
+   <div><div class="lbl">Quick fight · ${side==='a'?'Red corner':'Blue corner'}</div><h2 class="hero2">${side==='a'?'Choose your <span>fighter</span>':'Choose the <span>opponent</span>'}</h2></div>
+   ${seg('src',srcs,'qsrc')}
+   ${q.src!=='custom'?`<div class="seg">${[['all','All'],...DIVS.map(d=>[d,d])].map(([v,l])=>`<button class="${q.pdiv===v?'on':''}" data-act="qpdiv" data-v="${v}">${l}</button>`).join('')}</div>`:''}
+   ${list}</main>`}
 function quickV(){const q=qfInit();
+  if(q.pick)return qPicker(q);
   if(q.res){const x=q.res,W=x.w<0?null:x.w===0?q.a:q.b;
     return `<main class="view notop" id="view"><div><div class="lbl">Quick fight result</div><h2 class="hero2">${x.w===0?'You <span>win</span>':x.w===1?'You <span>lose</span>':'<span>Draw</span>'}</h2></div>
      <div class="list"><div class="item"><div class="k"><span class="t">${W?esc(fname(W))+' wins':'The judges split it'}</span><span class="lbl">${x.fin?`R${x.rd} ${x.time}`:'Decision'}</span></div><p>${esc(x.method)}</p></div></div>
@@ -814,13 +853,13 @@ function quickV(){const q=qfInit();
      </main>${ctaBar('Run it back?','Same fighters, new fight',`<button class="btn ghost" data-act="qnew">New fight</button><button class="btn" data-act="qgo">Rematch</button>`,true)}`}
   const seg=(k,opts,cls='')=>`<div class="seg ${cls}">${opts.map(([v,l])=>`<button class="${String(q[k])===String(v)?'on':''}" data-act="qset" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
   const st=Object.keys(STYLES).map(s=>[s,s]);
-  const card=(F,lbl)=>`<div class="item"><div class="k"><span class="lbl">${lbl}</span><span class="tag">${F.style}</span></div><div class="k" style="align-items:center"><span class="t" style="font-size:18px">${esc(fname(F))}</span><span class="ovr num">${F.ovr}<small>OVR</small></span></div></div>`;
+  const card=(F,lbl,side)=>`<button class="item qcorner" data-act="qpick" data-v="${side}" aria-label="Change ${side==='a'?'your fighter':'opponent'}"><div class="k"><span class="lbl">${lbl}</span><span class="tag">${F.style}</span></div><div class="k" style="align-items:center"><span class="t" style="font-size:18px">${esc(fname(F))}${F.nick?`<small class="lbl" style="display:block;color:var(--acc)">“${esc(F.nick)}”</small>`:''}</span><span class="ovr num">${F.ovr}<small>OVR</small></span></div><div class="k qmeta"><span class="lbl">${F.w!=null?F.w+'-'+F.l+' · ':''}${DIVN[F.div]||''}${F.promo&&PROMOS[F.promo]?' · '+PROMOS[F.promo].short:''}</span><span class="lbl qchg">Change ›</span></div></button>`;
+  const gap=Math.abs(DIVS.indexOf(q.a.div)-DIVS.indexOf(q.b.div));
   return `<main class="view notop" id="view"><div><button class="btn ghost sm" data-act="smode" data-v="">${svg(BACK)} Back</button></div>
    <div><div class="lbl">Quick fight</div><h2 class="hero2">Step into the <span>cage</span></h2></div>
-   <div class="list">${card(q.a,'Red corner · you')}${card(q.b,'Blue corner · CPU')}</div>
-   <button class="btn ghost sm" data-act="qroll">New opponent</button>
-   <section class="sec"><header><h3>Your style</h3></header>${seg('my',st,'g3')}</section>
-   <section class="sec"><header><h3>Opponent</h3></header>${seg('op',[['random','Random'],...st],'g3')}</section>
+   <div class="list">${card(q.a,'Red corner · you','a')}${card(q.b,'Blue corner · CPU','b')}</div>
+   ${gap?`<p class="hint">${gap>=2?'Freak show':'Open-weight'} fight: these two are ${gap} weight class${gap>1?'es':''} apart.</p>`:''}
+   <button class="btn ghost sm" data-act="qroll">Random opponent</button>
    <section class="sec"><header><h3>Arena</h3></header>${seg('arena',QARENA.map(a=>[a[0],a[1]]))}</section>
    <section class="sec"><header><h3>Rounds</h3></header>${seg('rounds',[[1,'1 round'],[3,'3 rounds'],[5,'5 rounds']])}</section>
    <section class="sec"><header><h3>Difficulty</h3></header>${diffSeg('qdiff')}</section>
@@ -1284,8 +1323,12 @@ const CSHEET={
 };
 
 const CH={
-  qset(t,v){U.qf[t.dataset.k]=t.dataset.k==='rounds'?+v:v;if(t.dataset.k==='op'&&v==='random')U.qf.b=null;render()},
-  qroll(){U.qf.b=null;render()},qnew(){U.qf.b=null;U.qf.res=null;render()},qgo(){qfGo()},qdiff(t,v){lsSet('cr.diff',v);render()},
+  qset(t,v){U.qf[t.dataset.k]=t.dataset.k==='rounds'?+v:v;render()},
+  qroll(){const q=qfInit();q.b=qRandomOpp(q.a);render()},qnew(){const q=qfInit();q.res=null;q.pick='b';render()},
+  qpick(t,v){const q=qfInit();q.pick=v;const cur=v==='a'?q.a:q.b,src=cur.src||'';q.src=src.startsWith('s:')?'save':src.startsWith('q:')?cur.promo:'custom';q.pdiv=cur.div||'all';render();const vw=document.getElementById('view');if(vw)vw.scrollTop=0},
+  qcancel(){U.qf.pick=null;render()},qsrc(t,v){U.qf.src=v;if(v==='save')U.qf.pdiv='all';render()},qpdiv(t,v){U.qf.pdiv=v;render()},
+  qchoose(t,v){const q=U.qf,f=qFind(v);if(!f)return;q[q.pick]=qCopy(f);q.pick=null;q.res=null;render()},
+  qstyle(t,v){const q=U.qf,side=q.pick;q[side]=quickFighter(v,side==='a'?0:1);q[side].nick='';q.pick=null;q.res=null;render()},qgo(){qfGo()},qdiff(t,v){lsSet('cr.diff',v);render()},
   cdiff(t,v){lsSet('cr.diff',v);renderCF()},cmode(t,v){lsSet('cr.ctrl',v);U.cf.mode=v;renderCF()},
   smode(t,v){U.start=v||null;if(v==='create'&&!U.cr)U.cr=crDefault();render()},
   cset(t,v){U.cr[t.dataset.k]=v;render()},
@@ -1325,7 +1368,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape'||!U.sheet||MGS)retur
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('input[data-cr]')){e.preventDefault();const ids=['cr-first','cr-last','cr-nick'],i=ids.indexOf(e.target.id);const n=i>=0&&i<2&&document.getElementById(ids[i+1]);if(n)n.focus();else e.target.blur()}});
 
 /* ============ input ============ */
-document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.disabled||(!S&&!['new','smode','cset','cpt','cgo','qset','qgo','qroll','qnew','qdiff'].includes(t.dataset.act)))return;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.disabled||(!S&&!['new','smode','cset','cpt','cgo','qset','qgo','qroll','qnew','qdiff','qpick','qcancel','qsrc','qpdiv','qchoose','qstyle'].includes(t.dataset.act)))return;
   const a=t.dataset.act,v=t.dataset.v;
   if(a==='scrim'&&e.target!==t)return;
   const H={

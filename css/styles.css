@@ -427,3 +427,7 @@ input[type=text]::placeholder{color:var(--faint)}
 .lknob{transition:transform .06s linear}
 @media (max-height:620px){.lstick{width:min(100%,104px)}.lleft{gap:8px}}
 .frow.best{border-color:var(--acc);box-shadow:inset 3px 0 0 var(--acc)}
+.qcorner{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.qcorner:active{background:var(--panel2)}
+.qcorner .qmeta .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.qcorner .qchg{color:var(--acc);flex:none;margin-left:8px}
