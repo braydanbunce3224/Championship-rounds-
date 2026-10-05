@@ -9,7 +9,6 @@ The whole game runs in the browser with no build step and no server. It installs
 ### Hands-on fights
 Every fight can be played live in a side-on pixel-art arena:
 - **Striking:** jab, cross/hook combos, overhand, leg kicks and head kicks, blocking, checking kicks, and dodging.
-- **3D arenas:** low-poly, N64-style fighters, octagons, the RYUJIN ring and a regional gym, with a broadcast camera that swings in on big shots and knockdowns (Three.js, bundled in `js/vendor`). A Classic 2D pixel-art mode is in the pause menu.
 - **Dynamic striking:** combos that flow faster when you chain them, uppercuts up close, body hooks and body kicks, teeps, a superman punch and a spinning back kick (risky if they miss), dash-ins, knockback against the fence, rocked states, and a momentum meter that puts you on fire.
 - **Counters:** parries (block right as a punch lands), catch kicks, counter knees into a shot, and front-headlock follow-ups after a sprawl (go behind or guillotine).
 - **Damage that matters:** separate head, body and leg damage, stamina, knockdowns, and wobbled fighters.

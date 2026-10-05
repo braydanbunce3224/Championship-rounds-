@@ -408,7 +408,6 @@ input[type=text]::placeholder{color:var(--faint)}
 @media (max-height:620px){.lbtn small,.lmeta{display:none}.lcall{min-height:30px;font-size:13px}.lhud{padding-bottom:4px}.lbtn .lic svg{width:22px;height:22px}.lpad{gap:10px;padding-top:6px}}
 
 /* 3D renderer, momentum meter, combo pop-ups */
-.lstage canvas.l3d{image-rendering:auto;aspect-ratio:448/280}
 .lmo{width:34px;height:5px;background:#1b1517;border-radius:3px;overflow:hidden;display:flex;flex:none}
 .lfs.b .lmo{justify-content:flex-end}
 .lmo i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f2a43c,#ff6a2b);border-radius:3px;transition:width .15s}
