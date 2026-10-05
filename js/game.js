@@ -25,15 +25,15 @@ const DIVS=['FW','LW','WW','MW','LHW','HW'];
 const DIVN={FW:'Featherweight',LW:'Lightweight',WW:'Welterweight',MW:'Middleweight',LHW:'Light Heavyweight',HW:'Heavyweight'};
 const DIVLB={FW:145,LW:155,WW:170,MW:185,LHW:205,HW:265};
 const PROMOS={
-  TFC:{id:'TFC',name:'Titan Fighting Championship',short:'TFC',ring:false,tv:2.6,start:212,prestige:82,color:'#e9b53c',
+  TFC:{id:'TFC',name:'Titan Fighting Championship',short:'TFC',ring:false,tv:4.6,start:212,prestige:82,color:'#e9b53c',
     tag:'The biggest stage in the sport. Rankings decide everything, five-round title fights, and a pay-per-view machine that needs feeding.',
     rules:['Cage · 3×5 min, main events 5×5','Rankings decide who gets title shots','Choose TV Fight Night or pay-per-view'],
     std:[5,5,5],five:[5,5,5,5,5],pool:{USA:5,BRA:3,RUS:3,IRL:1,MEX:2,NGA:1,POL:1,AUS:1,GEO:1,KOR:1,SWE:1,FRA:1,JPN:1}},
-  GFL:{id:'GFL',name:'Global Fight League',short:'GFL',ring:false,tv:2.2,start:41,prestige:62,color:'#4d8fff',
+  GFL:{id:'GFL',name:'Global Fight League',short:'GFL',ring:false,tv:5.2,start:41,prestige:62,color:'#4d8fff',
     tag:'MMA run like a sports league. Fighters bank points all season, the top four reach the championship card, and each champion takes home $1M.',
     rules:['3 points per win, +3/+2/+1 for a round 1/2/3 finish','Title fights only on the Championship card','$1M prize to every champion'],
     std:[5,5,5],five:[5,5,5,5,5],pool:{USA:5,BRA:2,RUS:2,FRA:1,NGA:1,POL:2,SWE:1,MEX:1,AUS:1,GEO:1}},
-  RYU:{id:'RYU',name:'RYUJIN Fighting Championships',short:'RYUJIN',ring:true,tv:1.8,start:31,prestige:66,color:'#ea4452',
+  RYU:{id:'RYU',name:'RYUJIN Fighting Championships',short:'RYUJIN',ring:true,tv:3.4,start:31,prestige:66,color:'#ea4452',
     tag:'Spectacle in a ring. Ten-minute opening rounds, soccer kicks, and open-weight fights no other promotion would sign off on.',
     rules:['Ring · 10 + 5 + 5 min rounds','Soccer kicks and stomps are legal','Open-weight bookings allowed'],
     std:[10,5,5],five:[10,5,5],pool:{JPN:6,NED:3,BRA:3,KOR:2,USA:1,RUS:1,GEO:1}}
@@ -211,18 +211,20 @@ function genFighter(promo,div,tier,pool,styleW,ageOverride){
 
 /* ---- hand-made fighters that appear in every new world ---- */
 const SIGNATURE=[{first:'Eric',last:'Duncle',nick:'The Machine',nat:'USA',age:28,div:'FW',style:'Wrestler',persona:'Stoic',promo:'TFC',
-  r:{str:80,pow:74,wre:86,grp:79,car:94,chn:82},w:18,l:2,d:0,ko:5,sub:4,streak:6,pop:74}];
+  r:{str:80,pow:74,wre:86,grp:79,car:94,chn:82},w:18,l:2,d:0,ko:5,sub:4,streak:6,pop:74},
+  {first:'Lane',last:'Johnson',nick:'Too Far',nat:'USA',age:30,div:'MW',style:'Brawler',persona:'Showman',promo:'TFC',champ:true,
+  r:{str:91,pow:95,wre:84,grp:82,car:88,chn:93},w:24,l:1,d:0,ko:17,sub:3,streak:11,pop:91}];
 function addSignature(){for(const t of SIGNATURE){if(Object.values(S.F).some(f=>f.first===t.first&&f.last===t.last))continue;
   const f=genFighter(t.promo,t.div,75,{USA:1},[t.style]);
   Object.assign(f,{first:t.first,last:t.last,nick:t.nick,nat:t.nat,age:t.age,style:t.style,persona:t.persona,r:{...t.r},w:t.w,l:t.l,d:t.d,ko:t.ko,sub:t.sub,streak:t.streak,pop:t.pop,morale:85,pot:Math.max(ovrOf(t.r),88),avail:1,fights:4});
-  f.ovr=ovrOf(f.r);f.rs=f.ovr+f.pop*.15;f.purse=purseFor(f);NAMES.add(t.first+t.last);S.F[f.id]=f}}
+  f.ovr=ovrOf(f.r);f.rs=f.ovr+f.pop*.15+(t.champ?20:0);f.pot=Math.max(f.pot,f.ovr);f.purse=purseFor(f);NAMES.add(t.first+t.last);S.F[f.id]=f}}
 // older saves were made before the featherweight division existed: give every promotion a featherweight roster and champion
 function migrateSave(){let changed=false;
   for(const id in PROMOS){if(!S.promos[id])continue;
     if(!Object.values(S.F).some(f=>f.promo===id&&f.div==='FW')){const per=id===S.pid?16:10,base=id==='TFC'?0:-3;
       for(let i=0;i<per;i++){const tier=i<3?rnd(80,88)+base:i<8?rnd(69,79)+base:rnd(56,68)+base;const f=genFighter(id,'FW',tier,PROMOS[id].pool,STYLE_W[id]);S.F[f.id]=f}
       changed=true}}
-  if(!Object.values(S.F).some(f=>f.first==='Eric'&&f.last==='Duncle')){addSignature();changed=true}
+  if(SIGNATURE.some(t=>!Object.values(S.F).some(f=>f.first===t.first&&f.last===t.last))){addSignature();changed=true}
   for(const id in PROMOS){if(!S.promos[id]||S.promos[id].champs.FW)continue;const list=Object.values(S.F).filter(f=>f.promo===id&&f.div==='FW'&&f.id!=='me').sort((a,b)=>b.rs-a.rs);
     if(list[0]){S.promos[id].champs.FW=list[0].id;list[0].pop=clamp(list[0].pop+14,0,97);list[0].purse=purseFor(list[0]);changed=true}}
   if(changed){computeRanks();save()}}
@@ -288,7 +290,8 @@ function boutInfo(a,b,o={}){
   let h=(a.pop+b.pop)/2*.6+6;
   if(o.title){h+=16;tags.push(['TITLE','acc'])}
   const ra=rk(a),rb=rk(b);
-  if(ra<=5&&rb<=5&&!o.title){h+=10;tags.push(['TOP 5',''])}else if(ra<=10&&rb<=10){h+=5}
+  if(S.pid==='GFL'&&!o.title&&ra<=6&&rb<=6){h+=12;tags.push(['PLAYOFF RACE','hot'])}
+  else if(ra<=5&&rb<=5&&!o.title){h+=10;tags.push(['TOP 5',''])}else if(ra<=10&&rb<=10){h+=5}
   const close=1-Math.abs(p-.5)*2;h+=close*12;if(close>.78)tags.push(["PICK'EM",'hot']);
   if(p>.82||p<.18){h-=8;tags.push(['MISMATCH','bad'])}
   const sa=STRIKEY.includes(a.style),sb=STRIKEY.includes(b.style);
@@ -300,7 +303,7 @@ function boutInfo(a,b,o={}){
   if(a.hist.some(x=>x.opp===b.id)){h+=5;tags.push(['REMATCH',''])}
   const g=Math.abs(DIVS.indexOf(a.div)-DIVS.indexOf(b.div));if(g){h+=8*g;tags.push([g>=2?'FREAK SHOW':'OPEN WEIGHT','hot'])}
   if(o.short){h-=6;tags.push(['SHORT NOTICE','bad'])}
-  return{p,h:clamp(Math.round(h),5,99),tags,cost:(a.purse+b.purse)*1.5/1000,rounds}}
+  return{p,h:clamp(Math.round(h),5,99),tags,cost:(a.purse+b.purse)*1.25/1000,rounds}}
 const QUOTES={champ:['The champ only takes title fights or real superfights.','Bring me a contender, not a tune-up.'],
   rank:["There's nothing to gain from fighting someone unranked.","Why would I fight down the rankings? Get me a name."],
   morale:["Pay me what I'm worth first.","I'm not fighting again on this contract."],
@@ -325,7 +328,7 @@ function cardInfo(){const n=S.next,inf=n.bouts.map((bt,i)=>{const a=S.F[bt.a],b=
 function project(ci){ci=ci||cardInfo();const n=S.next,Pr=P(),pr=PS().prestige,h=ci.hype,v=VENUES[S.pid][n.venue];
   const fill=clamp(.22+h/100*.85+pr/500,.12,1),gate=v.cap*fill*v.tix/1e6;
   const buys=n.type==='PPV'?Math.round(60*h*h*(.5+pr/100)*(S.week-S.lastPPV<4?.7:1)):0;
-  const ppv=buys*69.99*.5/1e6,tv=n.type==='TV'?Pr.tv*(.6+pr/250):0,spons=h*.02;
+  const ppv=buys*69.99*.5/1e6,tv=n.type==='TV'?Pr.tv*(.55+pr/250)*(.8+h/250):0,spons=h*.025;
   const purses=ci.inf.reduce((s,x,i)=>s+(n.bouts[i].out?0:x.cost),0),prod=n.type==='PPV'?2:1;
   const prize=S.pid==='GFL'&&isFinale()?n.bouts.filter(b=>b.title&&!b.out).length:0;
   const rev=gate+ppv+tv+spons,cost=purses+v.cost+prod+prize;
@@ -376,8 +379,8 @@ function applyResult(A,B,x,ctx){
   else{W.w++;L.l++;if(/KO/.test(x.method))W.ko++;if(/Submission/.test(x.method))W.sub++;
     W.streak=Math.max(1,W.streak+1);L.streak=Math.min(-1,L.streak-1);
     const upset=(x.w===0?ctx.p:1-ctx.p)<.4;
-    W.rs+=6+Math.max(0,(L.rs-W.rs)*.3)+(x.fin?2:0);L.rs-=5;
-    W.pop=clamp(W.pop+(x.fin?5:3)+(upset?4:0)+(ctx.main?3:0),0,99);L.pop=clamp(L.pop-2,0,99);
+    W.rs+=6+Math.max(0,(L.rs-W.rs)*.3)+(x.fin?2:0);L.rs-=6+(L.streak<=-1?4:0)+(L.streak<=-2?4:0);
+    W.pop=clamp(W.pop+((x.fin?5:3)+(upset?4:0)+(ctx.main?3:0))*(1-W.pop/115),0,99);L.pop=clamp(L.pop-3-(L.pop>70?1:0),0,99);
     W.morale=clamp(W.morale+8,0,100);L.morale=clamp(L.morale-8,0,100);
     if(ctx.pid==='GFL'){W.pts+=3+(x.fin?Math.max(0,4-x.rd):0)}
     if(ctx.title){const ps=S.promos[ctx.pid];if(ps.champs[W.div]!==W.id){ps.champs[W.div]=W.id;W.pop=clamp(W.pop+10,0,99)}}
@@ -414,13 +417,24 @@ function advanceWeek(){
     f.promo=to;f.fights=ri(3,5);addNews({tag:'rival',outlet:'Cageside Wire',h:`${PROMOS[to].short} signs free agent ${fname(f)}`,b:`${fname(f)} (${rec(f)}, ${DIVN[f.div]}) has signed a multi-fight deal with ${PROMOS[to].name}.`})}
   if(S.week%5===0)for(let i=0;i<2;i++){const all={};for(const k in NAT)all[k]=1;const f=genFighter('FA',pick(DIVS),rnd(56,72),all,STYLE_W.GFL,ri(21,25));f.fights=0;S.F[f.id]=f;
     if(i===0)addNews({tag:'business',outlet:'Full Mount Media',h:`Prospect watch: ${fname(f)} is unsigned`,b:`The ${f.age}-year-old ${f.style.toLowerCase()} is ${rec(f)} on the regional scene and wants a big-league contract. Scouts like his ceiling.`})}
-  if(S.goal&&S.week>S.goal.due){S.approval=clamp(S.approval-8,0,100);addInbox({type:'owner',title:'Owner goal missed',body:`You missed the deadline: ${S.goal.t}. Owner approval −8.`});S.goal=null;S.nextGoal=S.week+1}
+  // contender-series pipeline keeps every division deep enough to book
+  if(S.week%4===0)for(const id in PROMOS)for(const div of DIVS){const n=Object.values(S.F).filter(f=>f.promo===id&&f.div===div).length;
+    if(n<(id===S.pid?12:9)){const f=genFighter(id,div,rnd(60,71)+(id==='TFC'?1:-1),PROMOS[id].pool,STYLE_W[id],ri(22,26));f.fights=4;f.avail=S.week+1;S.F[f.id]=f;
+      if(id===S.pid)addNews({tag:'business',outlet:'Full Mount Media',h:`${P().short} signs ${fname(f)} out of its contender series`,b:`The ${f.age}-year-old ${DIVN[div].toLowerCase()} ${f.style.toLowerCase()} (${rec(f)}) earns a four-fight deal after a statement win on the ${P().short} contender series.`})}}
+  if(S.goal&&S.week>S.goal.due){S.approval=clamp(S.approval-6,0,100);addInbox({type:'owner',title:'Owner goal missed',body:`You missed the deadline: ${S.goal.t}. Owner approval −6.`});S.goal=null;S.nextGoal=S.week+1}
   if(!S.goal&&S.week>=S.nextGoal){newGoal();addInbox({type:'owner',title:'New directive from ownership',body:`${S.goal.t}. Deadline: week ${S.goal.due}.`})}
   if(S.week%52===0)for(const f of Object.values(S.F)){f.age++;
-    if(f.age>=37&&Math.random()<.35&&!isChamp(f)){addNews({tag:'business',outlet:'The Ground Game',h:`${fname(f)} retires at ${f.age}`,b:`${fname(f)} hangs up the gloves with a ${rec(f)} record.`});delete S.F[f.id]}}
+    if(f.age>=37&&Math.random()<.35&&!isChamp(f)&&retireOK(f)){addNews({tag:'business',outlet:'The Ground Game',h:`${fname(f)} retires at ${f.age}`,b:`${fname(f)} hangs up the gloves with a ${rec(f)} record.`});retireF(f)}}
   if(S.week===S.next.week)fightWeek();
   computeRanks();save();
 }
+// retiring removes a fighter from the world; never pull someone who is booked, and clear every reference to him
+function retireOK(f){if(f.id==='me')return false;if(S.next&&S.next.bouts&&S.next.bouts.some(b=>b.a===f.id||b.b===f.id))return false;
+  if(S.c){if(S.c.fight&&S.c.fight.opp===f.id)return false;if((S.c.offers||[]).some(o=>o.opp===f.id))return false}return true}
+function retireF(f){const id=f.id;delete S.F[id];
+  for(const o of Object.values(S.F)){if(o.rivals.length)o.rivals=o.rivals.filter(r=>r!==id);if(o.callout===id)o.callout=null}
+  for(const p in S.promos)for(const d in S.promos[p].champs)if(S.promos[p].champs[d]===id)delete S.promos[p].champs[d];
+  S.inbox=S.inbox.filter(i=>i.fid!==id&&i.tid!==id&&i.keep!==id);if(S.c&&S.c.callout===id)S.c.callout=null}
 function toFA(f,why){const wasChamp=isChamp(f);const from=f.promo;f.promo='FA';f.expiring=null;f.fights=0;
   if(wasChamp){delete S.promos[from].champs[f.div];addNews({tag:'business',outlet:'Cageside Wire',h:`${PROMOS[from].short} champion ${fname(f)} walks away. The title is vacant`,b:`Negotiations broke down and ${fname(f)} is now a free agent. The ${DIVN[f.div].toLowerCase()} belt is vacant.`,social:posts(['Letting the champ walk is the worst decision in this sport.','Somebody is getting fired over this.'])});S.approval=clamp(S.approval-6,0,100)}
   else if(from===S.pid)addNews({tag:'business',outlet:'Full Mount Media',h:`${fname(f)} hits free agency`,b:`${fname(f)} (${rec(f)}) is no longer under contract with ${PROMOS[from].short}.`});
@@ -441,7 +455,7 @@ function fightWeek(){
 }
 
 /* ============ inbox actions ============ */
-function askFor(f){return Math.round(purseFor(f)*(1.05+f.pop/250+(isChamp(f)?.25:0)))}
+function askFor(f){return Math.round(purseFor(f)*(1+f.pop/500+(isChamp(f)?.12:0)))}
 function negotiate(f,mult,fights){
   const ask=askFor(f),offer=Math.round(ask*mult),pr=PS().prestige;
   const p=f.promo==='FA'?clamp(.4+(mult-1)*2.2+pr/300,.05,.95):clamp(.62+(mult-1)*2.4+f.morale/300,.05,.97);
@@ -489,7 +503,7 @@ function finishEvent(){const ev=U.ev,n=S.next,pid=S.pid;
   const score=ev.ci.hype*.5+fins/ev.res.length*32+upsets*4-mism*5+ev.res.length*.8;
   const grade=score>=78?'A+':score>=72?'A':score>=66?'A−':score>=60?'B+':score>=54?'B':score>=48?'B−':score>=42?'C+':score>=36?'C':score>=30?'C−':score>=24?'D':'F';
   const gi='F D C− C C+ B− B B+ A− A A+'.split(' ').indexOf(grade);
-  S.cash+=profit;S.approval=clamp(S.approval+clamp(profit*1.2,-10,5)+(gi-5)*.8,0,100);
+  S.cash+=profit;S.approval=clamp(S.approval+clamp(profit*1.2,-10,5)+(gi-3)*.8,0,100);
   PS().prestige=clamp(PS().prestige+(score-48)/14,25,99);PS().num=n.num;
   if(n.type==='PPV')S.lastPPV=S.week;S.lastGrade=grade;
   const sum={name:ev.name,wk:S.week,grade,profit,rev,cost:pr.cost+bonusCost,buys:Math.round(pr.buys*noise),att:pr.att,hype:ev.ci.hype,type:n.type,
@@ -725,7 +739,8 @@ function bookSheet(s){const rep=s.replace!=null;
     const short=rep&&S.next.week-S.week<=2;
     return{title:rep?'Replacement':'Pick an opponent',body:`<div class="lbl">${rep?'Replacement':'Step 2 of 3'} · Opponent for ${esc(fname(a))}</div>
      ${open?'<p class="hint">RYUJIN allows open-weight fights. Bigger size gaps mean more hype and a real chance the smaller man says no.</p>':''}
-     <div class="list">${opp.length?opp.map(f=>{const bi=boutInfo(a,f,{short});return `<button class="frow" data-act="pickB" data-v="${f.id}"><span class="rk${isChamp(f)?' c':''}">${rkLbl(f).replace('#','')}</span><span style="min-width:0"><div class="nm">${esc(fname(f))}</div><div class="sub"><span>${rec(f)}</span><span>${f.div!==a.div?f.div+' · ':''}${ml(1-bi.p)}</span>${bi.tags.slice(0,2).map(t=>`<span class="tag ${t[1]}">${t[0]}</span>`).join('')}</div></span><span class="ovr num" style="color:var(--hot)">${bi.h}<small>HYPE</small></span></button>`}).join(''):'<div class="empty">No available opponents.</div>'}</div>`}}
+     ${opp.length>1?'<p class="hint">Sorted by projected hype. The best match is on top.</p>':''}
+     <div class="list">${opp.length?opp.map(f=>[f,boutInfo(a,f,{short})]).sort((x,y)=>y[1].h-x[1].h).map(([f,bi],i)=>{return `<button class="frow${i===0?' best':''}" data-act="pickB" data-v="${f.id}"><span class="rk${isChamp(f)?' c':''}">${rkLbl(f).replace('#','')}</span><span style="min-width:0"><div class="nm">${esc(fname(f))}</div><div class="sub"><span>${rec(f)}</span><span>${f.div!==a.div?f.div+' · ':''}${ml(1-bi.p)}</span>${bi.tags.slice(0,2).map(t=>`<span class="tag ${t[1]}">${t[0]}</span>`).join('')}</div></span><span class="ovr num" style="color:var(--hot)">${bi.h}<small>HYPE</small></span></button>`}).join(''):'<div class="empty">No available opponents.</div>'}</div>`}}
   const b=S.F[s.b],short=rep&&S.next.week-S.week<=2;
   const tOK=canTitle(a,b);if(!tOK)s.title=false;
   const main=rep?s.replace===0:S.next.bouts.length===0;
@@ -912,7 +927,7 @@ function regOpp(tier){const all={};for(const k in NAT)all[k]=1;
   f.w=ri(1,4)+Math.max(0,Math.round((tier-50)/3));f.l=ri(0,3);f.d=0;f.ko=Math.round(f.w*.5);f.sub=Math.min(f.w-f.ko,ri(0,2));f.pop=ri(2,12);f.streak=ri(0,2);
   S.F[f.id]=f;return f}
 function genOffers(){const c=C(),me=ME();c.offers=[];c.offerWk=S.week;
-  for(const f of Object.values(S.F))if(f.promo==='REG'&&f.id!=='me'&&!me.hist.some(h=>h.opp===f.id)&&!(c.fight&&c.fight.opp===f.id))delete S.F[f.id];
+  for(const f of Object.values(S.F))if(f.promo==='REG'&&f.id!=='me'&&!me.hist.some(h=>h.opp===f.id)&&!(c.fight&&c.fight.opp===f.id))retireF(f);
   if(me.promo==='REG'){
     if(c.regWins>=3){const o=regOpp(rnd(57,61));c.offers.push({opp:o.id,camp:5,purse:10,label:'Contender Showcase',note:'Every big promotion is watching. Win and the contracts come to you.',showcase:true,pop:5})}
     else{const t=50+c.regWins*3;const a=regOpp(t-4+rnd(-2,2)),b=regOpp(t+3+rnd(-2,2));
@@ -978,7 +993,7 @@ function careerWeek(){const c=C(),me=ME();
   computeRanks();save();return true}
 function yearTick(){const me=ME();
   for(const f of Object.values(S.F)){if(f.id==='me')continue;f.age++;if(f.promo==='GFL')f.pts=0;
-    if(f.age>=37&&Math.random()<.35&&!isChamp(f)&&!f.reserved&&f.promo!=='REG'){addNews({tag:'rival',outlet:'The Ground Game',h:`${fname(f)} retires at ${f.age}`,b:`${fname(f)} hangs up the gloves with a ${rec(f)} record.`});delete S.F[f.id]}}
+    if(f.age>=37&&Math.random()<.35&&!isChamp(f)&&!f.reserved&&f.promo!=='REG'&&retireOK(f)){addNews({tag:'rival',outlet:'The Ground Game',h:`${fname(f)} retires at ${f.age}`,b:`${fname(f)} hangs up the gloves with a ${rec(f)} record.`});retireF(f)}}
   me.age++;if(me.promo==='GFL')me.pts=0;
   if(me.age>=31){const n=me.age>=34?3:2;for(let i=0;i<n;i++){const k=pick(['str','pow','car','wre','grp']);me.r[k]=clamp(me.r[k]-ri(1,2),35,99)}me.ovr=ovrOf(me.r);
     addInbox({type:'note',title:`Happy birthday. You're ${me.age}`,body:me.age>=34?'Your body is slowing down. Several ratings dipped.':'Father Time is catching up. A couple of ratings dipped.'})}}

@@ -9,6 +9,7 @@ The whole game runs in the browser with no build step and no server. It installs
 ### Hands-on fights
 Every fight can be played live in a side-on pixel-art arena:
 - **Striking:** jab, cross/hook combos, overhand, leg kicks and head kicks, blocking, checking kicks, and dodging.
+- **Six divisions** from featherweight (145 lb) to heavyweight, with hand-made stars like TFC middleweight champion Lane "Too Far" Johnson and featherweight contender Eric "The Machine" Duncle.
 - **Octagon fights:** fighters move freely around the cage: circle, cut off the cage, pin a man against any side of the fence. A SNES-style "Mode 7" broadcast camera swings around the action, with seating all around the cage and a mini-map in the corner.
 - **Dynamic striking:** combos that flow faster when you chain them, uppercuts up close, body hooks and body kicks, teeps, a superman punch and a spinning back kick (risky if they miss), dash-ins, knockback against the fence, rocked states, and a momentum meter that puts you on fire.
 - **Counters:** parries (block right as a punch lands), catch kicks, counter knees into a shot, and front-headlock follow-ups after a sprawl (go behind or guillotine).
